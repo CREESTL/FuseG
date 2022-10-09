@@ -24,6 +24,10 @@ contract RewardVault is IRewardVault, Ownable{
 
     uint256 private constant PRECISION = 1e18;
 
+    /// @notice Initializes fuseG platform addresses
+    /// @param _fuseG FuseG token address
+    /// @param _goldX GoldX token address
+    /// @param _multiSigVault multi-signature vault address
     constructor(address _fuseG, address _goldX, address _multiSigVault) {
         require(_fuseG != address(0), "RV: FUSEG ADDRESS CANNOT BE ZERO");
         require(_goldX != address(0), "RV: GOLDX ADDRESS CANNOT BE ZERO");
@@ -34,6 +38,10 @@ contract RewardVault is IRewardVault, Ownable{
         multiSigVault = _multiSigVault;
     }    
 
+    /// @notice Sets new round
+    /// @param _phaseSupply GoldX amount in one phase
+    /// @param _phaseCount amount of phases
+    /// @param _coeffs FuseG : GoldX coefficient for each phase
     function setNewRound(uint256 _phaseSupply, uint8 _phaseCount, uint256[] memory _coeffs) public onlyOwner {
         require(vaultDepleted, "RV: PREVIOUS ROUND HASN'T FINISHED YET");
         require(_coeffs.length == phaseCount, "RV: COEFFS NUM != PHASE COUNT");
@@ -55,6 +63,9 @@ contract RewardVault is IRewardVault, Ownable{
         emit NewRound(roundSupply, phaseSupply, phaseCount); 
     }
 
+    /// @notice Called by FuseG token, mines GoldX to FuseG holders
+    /// @param sender user who initiated FuseG transaction
+    /// @param fuseGAmount amount of FuseG tokens in transaction
     function mineGoldX(address sender, uint256 fuseGAmount) external {
         require(msg.sender == fuseG, "RV: ONLY FUSEG CONTRACT CAN CALL");
         uint8 phase = getMiningPhase(); 
@@ -68,6 +79,10 @@ contract RewardVault is IRewardVault, Ownable{
         }
     }
 
+    /// @notice Calculates amount of GoldX to distribute to user based on coeffs and phase
+    /// @param phase current phase
+    /// @param fuseGAmount amount of FuseG tokens in transaction
+    /// @return GoldX amount to mine
     function calcAmountToMine(uint8 phase, uint256 fuseGAmount) internal view returns(uint256) {
         uint8 remainingPhaseCount = phaseCount - phase;
         uint256 coeff;
@@ -86,6 +101,8 @@ contract RewardVault is IRewardVault, Ownable{
         return roundSupply - minedAmount;
     }
 
+    /// @notice Getter for mining phase
+    /// @return current mining phase
     function getMiningPhase() public view returns(uint8) {
         uint8 phase = uint8(minedAmount / phaseSupply);
         return phase;
