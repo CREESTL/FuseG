@@ -6,9 +6,6 @@ const SUPPLIER_ROLE = "0xbc1f3f7c406085be62d227092f4fd5af86922a19f3a87e6199f1401
 const arrToBN = (arr) => {
     return arr.map((el) => parseEther(el.toString()))
 }
-const calcMineAmountJs = (vaultParams, fuseGAmount) => {
-
-}
 
 describe("Reward vault", () => {
     beforeEach( async () => {
@@ -116,35 +113,113 @@ describe("Reward vault", () => {
             expect(minedAmount).to.be.equal(fuseGAmount);
         });
         it("Depletion case - no phase overlap", async() => {
-            let amounts = [25, 12.5, 6.25, 5, 3.125, 2];
+            let amounts = [25, 12.5, 6.25, 5, 3.125];
             let phaseSupply = parseEther("100");
             let phaseCount = 5;
             let coeffs = [1,2,4,5,8];
-            coeffs = arrToBN(coeffs);
-            amounts = arrToBN(amounts);
 
-            await rewardVault.setNewRound(phaseSupply, phaseCount, coeffs);
-            for(let i=0;i<6;i++) {
+            coeffsBN = arrToBN(coeffs);
+            amountsBN = arrToBN(amounts);
+
+            await rewardVault.setNewRound(phaseSupply, phaseCount, coeffsBN);
+            let expectedMinedAmount = 0;
+            let expectedPhase = 0;
+            let expectedPhaseAmount = 100;
+            for(let i=0;i<amounts.length;i++) {
                 for(let j=0;j<4;j++) {
-                    console.log("User sent: ", amounts[i]/1e18, "FuseG"); 
-                    await rewardVault.mineGoldX(alice.address, amounts[i]);
+                    let balanceBefore = await goldX.balanceOf(alice.address);
+                    await rewardVault.mineGoldX(alice.address, amountsBN[i]);
                     let balanceAfter = await goldX.balanceOf(alice.address);
-                    console.log("User balance: ", balanceAfter/1e18, "GoldX"); 
                     let [phase, phaseAmount] = await rewardVault.getMiningPhase();
                     let minedAmount = await rewardVault.minedAmount();
-                    console.log("Phase: ", phase); 
-                    console.log("Phase amount: ", phaseAmount/1e18, "GoldX"); 
-                    console.log("Mined amount: ", minedAmount/1e18, "GoldX"); 
-                    console.log("Vault depleted: ", await rewardVault.vaultDepleted());
+                    console.log(
+                        "User sent: ", amountsBN[i]/1e18, "FuseG", 
+                        " | User balance: ", balanceAfter/1e18, "GoldX",
+                        " | Phase: ", phase, 
+                        " | Phase amount: ", phaseAmount/1e18, "GoldX", 
+                        " | Mined amount: ", minedAmount/1e18, "GoldX", 
+                        " | Vault depleted: ", await rewardVault.vaultDepleted()
+                    );
+                    //GoldX sent = X * k, X - FuseG amount, k - phase coeff
+                    let profit = balanceAfter.sub(balanceBefore)  / 1e18;
+                    expect(profit).to.be.equal(amounts[i] * coeffs[i]);
+                    
+                    expectedMinedAmount += amounts[i] * coeffs[i];
+                    expectedPhaseAmount -= amounts[i] * coeffs[i];
+                    //Out of tokens for the current phase? Start new phase
+                    if(expectedPhaseAmount == 0) {
+                        expectedPhase ++;
+                        expectedPhaseAmount = 100;
+                    }
+                    expect(phase).to.be.equal(expectedPhase);
+                    expect(minedAmount/1e18).to.be.equal(expectedMinedAmount);
+                    expect(phaseAmount/1e18).to.be.equal(expectedPhaseAmount);
                 }
             }
-            /*
-            let expectedPhaseAmount = phaseSupply.sub(fuseGAmount.sub(phaseSupply))
-            expect(balanceAfter).to.be.equal(fuseGAmount);
-            expect(phaseAfter).to.be.equal(1);
-            expect(phaseAmountAfter).to.be.equal(expectedPhaseAmount);
-            expect(minedAmount).to.be.equal(fuseGAmount);
-        */});
+        });
+        it("Depletion case - phase overlap", async() => {
+            let amounts = [30, 8, 6, 5, 2];
+            let phaseSupply = parseEther("100");
+            let phaseCount = 5;
+            let coeffs = [1,2,4,5,8];
+
+            coeffsBN = arrToBN(coeffs);
+            amountsBN = arrToBN(amounts);
+
+            await rewardVault.setNewRound(phaseSupply, phaseCount, coeffsBN);
+            let expectedMinedAmount = 0;
+            let expectedPhase = 0;
+            let expectedPhaseAmount = 100;
+            for(let i=0;i<amounts.length;i++) {
+                for(let j=0;j<4;j++) {
+                    let balanceBefore = await goldX.balanceOf(alice.address);
+                    await rewardVault.mineGoldX(alice.address, amountsBN[i]);
+                    let balanceAfter = await goldX.balanceOf(alice.address);
+                    let [phase, phaseAmount] = await rewardVault.getMiningPhase();
+                    let minedAmount = await rewardVault.minedAmount();
+                    console.log(
+                        "User sent: ", amountsBN[i]/1e18, "FuseG", 
+                        " | User balance: ", balanceAfter/1e18, "GoldX",
+                        " | Phase: ", phase, 
+                        " | Phase amount: ", phaseAmount/1e18, "GoldX", 
+                        " | Mined amount: ", minedAmount/1e18, "GoldX", 
+                        " | Vault depleted: ", await rewardVault.vaultDepleted()
+                    );
+                    //GoldX sent = X * k, X - FuseG amount, k - phase coeff
+                    //if Y < X, Y - phase supply left
+                    //send Y + (X - Y/k1) * k2
+                    let profit = balanceAfter.sub(balanceBefore)  / 1e18;
+
+                    let X = amounts[i] * coeffs[i];
+                    let Y = expectedPhaseAmount; 
+                    let expectedProfit = 0;
+
+                    //Phase supply has enough tokens
+                    if(Y > X) {
+                        expectedProfit = amounts[i] * coeffs[i];
+                        expectedPhaseAmount -= amounts[i] * coeffs[i];
+                    }
+                    //Out of tokens for the current phase? Start new phase
+                    if(Y == 0) {
+                        expectedProfit = amounts[i] * coeffs[i];
+                        expectedPhase ++;
+                        expectedPhaseAmount = 100;
+                    }
+                    //Not enough tokens at current phase, send the remainder, start new phase
+                    if(Y != 0 && Y < X) {
+                        expectedProfit = Y + (amounts[i] - Y/coeffs[i]) * coeffs[i+1];
+                        expectedPhase ++;
+                        expectedPhaseAmount = 100 - (amounts[i] - Y/coeffs[i]) * coeffs[i+1];
+                    }
+                    
+                    expectedMinedAmount += expectedProfit;
+                    expect(profit).to.be.equal(expectedProfit);
+                    expect(phase).to.be.equal(expectedPhase);
+                    expect(minedAmount/1e18).to.be.equal(expectedMinedAmount);
+                    expect(phaseAmount/1e18).to.be.equal(expectedPhaseAmount);
+                }
+            }
+        });
     });
 });
 
