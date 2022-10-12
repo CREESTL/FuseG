@@ -220,6 +220,43 @@ describe("Reward vault", () => {
                 }
             }
         });
+        it("Depletion case - if not enough tokens in the last phase, send all that is left", async() => {
+            let fuseGAmount = parseEther("150");
+            let phaseSupply = parseEther("100");
+            let phaseCount = 2;
+            let coeffs = [1,1];
+            coeffs = arrToBN(coeffs);
+
+            await rewardVault.setNewRound(phaseSupply, phaseCount, coeffs);
+            await rewardVault.mineGoldX(alice.address, fuseGAmount);
+            await rewardVault.mineGoldX(alice.address, fuseGAmount);
+            balance = await goldX.balanceOf(alice.address);
+            expect(balance).to.be.equal(phaseSupply.mul(phaseCount));
+        });
+        it("Emits event when GoldX is mined", async() => {
+            let fuseGAmount = parseEther("10");
+            let phaseSupply = parseEther("100");
+            let phaseCount = 5;
+            let coeffs = [1,1,1,1,1];
+            coeffs = arrToBN(coeffs);
+
+            await rewardVault.setNewRound(phaseSupply, phaseCount, coeffs);
+            await expect(rewardVault.mineGoldX(alice.address, fuseGAmount))
+                .to.emit(rewardVault, "Mine")
+                .withArgs(alice.address, fuseGAmount);
+        });
+        it("Emits event when Vault is depleted", async() => {
+            let fuseGAmount = parseEther("101");
+            let phaseSupply = parseEther("100");
+            let phaseCount = 2;
+            let coeffs = [1,1];
+            coeffs = arrToBN(coeffs);
+
+            await rewardVault.setNewRound(phaseSupply, phaseCount, coeffs);
+            await rewardVault.mineGoldX(alice.address, fuseGAmount);
+            await expect(rewardVault.mineGoldX(alice.address, fuseGAmount))
+                .to.emit(rewardVault, "RewardVaultDepleted");
+        });
     });
 });
 
