@@ -8,7 +8,7 @@ import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 
 import "./interfaces/IRewardVault.sol";
-import "hardhat/console.sol";
+
 contract RewardVault is IRewardVault, Ownable, AccessControl, Initializable{
     IERC20 goldX;
 
@@ -46,7 +46,6 @@ contract RewardVault is IRewardVault, Ownable, AccessControl, Initializable{
         multiSigVault = _multiSigVault;
         _grantRole(SUPPLY_ROLE, msg.sender);
         _grantRole(SUPPLY_ROLE, _multiSigVault);
-
     }    
 
     /// @notice Sets new round
