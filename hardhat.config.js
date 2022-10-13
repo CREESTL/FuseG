@@ -52,5 +52,4 @@ module.exports = {
       polygon: POLYGONSCAN_API_KEY
     }
   },
-  skipFiles: ["node_modules"],
 };
