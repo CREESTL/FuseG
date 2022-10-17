@@ -3,70 +3,55 @@
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
+import "./interfaces/IRewardVault.sol";
+import "./interfaces/IMultiSigVault.sol";
 
 pragma solidity ^0.8.0;
 
-contract MultiSigWallet is Ownable, Initializable {
-    event SubmitTransaction(
-        address indexed signer,
-        uint256 indexed txIndex,
-        address indexed to,
-        uint256 amount
-    );
-    event ConfirmTransaction(address indexed signer, uint256 indexed txIndex);
-    event RevokeConfirmation(address indexed signer, uint256 indexed txIndex);
-    event ExecuteTransaction(address indexed signer, uint256 indexed txIndex);
+contract MultiSigVault is IMultiSigVault, Ownable, Initializable {
+    using EnumerableSet for EnumerableSet.AddressSet;
 
     IERC20 goldX;
-    address public rewardVault;
-    address[] public signers;
-    mapping(address => bool) public isSigner;
-
-    struct Transaction {
-        address to;
-        uint256 amount;
-        bool executed;
-        uint256 numConfirmations;
-    }
-
-    // mapping from tx index => signer => bool
+    IRewardVault rewardVault;
+    EnumerableSet.AddressSet signers;
+    // mapping from proposal index => signer => bool
     mapping(uint256 => mapping(address => bool)) public isConfirmed;
 
-    Transaction[] public transactions;
+    Proposal[] public proposals;
 
     modifier onlySigner() {
-        require(isSigner[msg.sender], "MV: NOT THE SIGNER");
+        require(signers.contains(msg.sender), "MV: NOT THE SIGNER");
         _;
     }
 
-    modifier txExists(uint256 _txIndex) {
-        require(_txIndex < transactions.length, "MV: TX DOESN'T EXIST");
+    modifier proposalExists(uint256 _proposalIndex) {
+        require(_proposalIndex < proposals.length, "MV: PROPOSAL DOESN'T EXIST");
         _;
     }
 
-    modifier notExecuted(uint256 _txIndex) {
-        require(!transactions[_txIndex].executed, "MV: TX ALREADY EXECUTED");
+    modifier notExecuted(uint256 _proposalIndex) {
+        require(!proposals[_proposalIndex].executed, "MV: PROPOSAL ALREADY EXECUTED");
         _;
     }
 
-    modifier notConfirmed(uint256 _txIndex) {
-        require(!isConfirmed[_txIndex][msg.sender], "MV: TX ALREADY CONFIRMED");
+    modifier notConfirmed(uint256 _proposalIndex) {
+        require(!isConfirmed[_proposalIndex][msg.sender], "MV: PROPOSAL ALREADY CONFIRMED");
         _;
     }
 
+    /// @notice constructor with initial signers
+    /// @param _signers array of signer addresses
     constructor(address[] memory _signers) {
-        require(_signers.length > 0, "MV: SIGNERS REQUIRED");
+        require(_signers.length > 0, "MV: ADD AT LEAST ONE SIGNER");
 
         for (uint256 i = 0; i < _signers.length; i++) {
-            address signer = _signers[i];
-
-            require(signer != address(0), "MV: INVALID SIGNER");
-            require(!isSigner[signer], "MV: SIGNER NOT UNIQUE");
-
-            isSigner[signer] = true;
-            signers.push(signer);
+            require(_signers[i] != address(0), "MV: INVALID SIGNER");
+            require(!signers.contains(_signers[i]), "MV: SIGNER NOT UNIQUE");
+            signers.add(_signers[i]);
         }
     }
+
     /// @notice Initializes fuseG platform addresses
     /// @param _goldX GoldX token address
     /// @param _rewardVault reward vault address
@@ -79,17 +64,23 @@ contract MultiSigWallet is Ownable, Initializable {
         require(_rewardVault != address(0), "RV: REWARDVAULT ADDRESS CANNOT BE ZERO");
         
         goldX = IERC20(_goldX);
-        rewardVault = _rewardVault;
+        rewardVault = IRewardVault(_rewardVault);
     }    
-
-    function submitTransaction(
+    /// @notice Submits the proposal 
+    /// @param _proposalType see Proposals enum 
+    /// @param _to subject of the proposal 
+    /// @param _amount GoldX amount to send if tx type proposal
+    //TODO: CHECK IF ENUM VALIDATION IS NEEDED
+    function submitProposal(
+        Proposals _proposalType,
         address _to,
         uint256 _amount
     ) public onlySigner {
-        uint256 txIndex = transactions.length;
+        uint256 proposalIndex = proposals.length;
 
-        transactions.push(
-            Transaction({
+        proposals.push(
+            Proposal({
+                proposalType: _proposalType,
                 to: _to,
                 amount: _amount,
                 executed: false,
@@ -97,83 +88,110 @@ contract MultiSigWallet is Ownable, Initializable {
             })
         );
 
-        emit SubmitTransaction(msg.sender, txIndex, _to, _amount);
+        emit SubmitProposal(msg.sender, _proposalType, proposalIndex, _to, _amount);
     }
 
-    function confirmTransaction(uint256 _txIndex)
-        public
-        onlyOwner
-        txExists(_txIndex)
-        notExecuted(_txIndex)
-        notConfirmed(_txIndex)
-    {
-        Transaction storage transaction = transactions[_txIndex];
-        transaction.numConfirmations += 1;
-        isConfirmed[_txIndex][msg.sender] = true;
-
-        emit ConfirmTransaction(msg.sender, _txIndex);
+    /// @notice Sets new round
+    /// @param _phaseSupply GoldX amount in one phase
+    /// @param _phaseCount amount of phases
+    /// @param _coeffs FuseG : GoldX coefficient for each phase
+    function setNewRound(uint256 _phaseSupply, uint8 _phaseCount, uint256[] memory _coeffs) public onlyOwner {
+        rewardVault.setNewRound(_phaseSupply, _phaseCount, _coeffs);
     }
 
-    function executeTransaction(uint256 _txIndex)
+    /// @notice confirms the proposal
+    /// @param _proposalIndex index of the proposal inside proposals array
+    function confirmProposal(uint256 _proposalIndex)
         public
-        onlyOwner
-        txExists(_txIndex)
-        notExecuted(_txIndex)
+        onlySigner
+        proposalExists(_proposalIndex)
+        notExecuted(_proposalIndex)
+        notConfirmed(_proposalIndex)
     {
-        Transaction storage transaction = transactions[_txIndex];
+        Proposal storage proposal = proposals[_proposalIndex];
+        proposal.numConfirmations += 1;
+        isConfirmed[_proposalIndex][msg.sender] = true;
+
+        emit ConfirmProposal(msg.sender, _proposalIndex);
+    }
+
+    /// @notice executes the proposal
+    /// @param _proposalIndex index of the proposal inside proposals array
+    function executeProposal(uint256 _proposalIndex)
+        public
+        onlySigner
+        proposalExists(_proposalIndex)
+        notExecuted(_proposalIndex)
+    {
+        Proposal storage proposal = proposals[_proposalIndex];
 
         require(
-            transaction.numConfirmations >= signers.length / 2,
+            proposal.numConfirmations >= signers.length() / 2,
             "MV: NOT ENOUGH CONFIRMATIONS"
         );
 
-        transaction.executed = true;
-        goldX.transfer(transaction.to, transaction.amount);
+        proposal.executed = true;
+        if (proposal.proposalType == Proposals.Transaction)
+            goldX.transfer(proposal.to, proposal.amount);
+        if (proposal.proposalType == Proposals.AddSigner)
+            signers.add(proposal.to);
+        if (proposal.proposalType == Proposals.RemoveSigner)
+            signers.remove(proposal.to);
+        //if (proposal.proposalType == Proposals.ChangeOwner)
+        //    goldX.transferOwnership(proposal.to);
 
-        emit ExecuteTransaction(msg.sender, _txIndex);
+        emit ExecuteProposal(msg.sender, _proposalIndex);
     }
 
-    function revokeConfirmation(uint256 _txIndex)
+    /// @notice cancels confirmation of the proposal
+    /// @param _proposalIndex index of the proposal inside proposals array
+    function revokeConfirmation(uint256 _proposalIndex)
         public
-        onlyOwner
-        txExists(_txIndex)
-        notExecuted(_txIndex)
+        onlySigner
+        proposalExists(_proposalIndex)
+        notExecuted(_proposalIndex)
     {
-        Transaction storage transaction = transactions[_txIndex];
+        Proposal storage proposal = proposals[_proposalIndex];
 
-        require(isConfirmed[_txIndex][msg.sender], "MV: TX NOT CONFIRMED");
+        require(isConfirmed[_proposalIndex][msg.sender], "MV: PROPOSAL NOT CONFIRMED");
 
-        transaction.numConfirmations -= 1;
-        isConfirmed[_txIndex][msg.sender] = false;
+        proposal.numConfirmations -= 1;
+        isConfirmed[_proposalIndex][msg.sender] = false;
 
-        emit RevokeConfirmation(msg.sender, _txIndex);
+        emit RevokeConfirmation(msg.sender, _proposalIndex);
     }
 
+    /// @notice returns the list of signers
     function getSigners() public view returns (address[] memory) {
-        return signers;
+        return signers.values();
     }
 
-    function getTransactionCount() public view returns (uint) {
-        return transactions.length;
+    /// @notice returns amount of all proposals
+    function getProposalCount() public view returns (uint) {
+        return proposals.length;
     }
 
-    function getTransaction(uint256 _txIndex)
+    /// @notice returns info on specific proposal
+    /// @param _proposalIndex index of the proposal inside proposals array
+    function getProposal(uint256 _proposalIndex)
         public
         view
         returns (
+            Proposals proposalType,
             address to,
             uint256 amount,
             bool executed,
             uint256 numConfirmations
         )
     {
-        Transaction storage transaction = transactions[_txIndex];
+        Proposal storage proposal = proposals[_proposalIndex];
 
         return (
-            transaction.to,
-            transaction.amount,
-            transaction.executed,
-            transaction.numConfirmations
+            proposal.proposalType,
+            proposal.to,
+            proposal.amount,
+            proposal.executed,
+            proposal.numConfirmations
         );
     }
 }

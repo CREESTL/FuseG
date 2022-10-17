@@ -52,7 +52,7 @@ contract RewardVault is IRewardVault, Ownable, AccessControl, Initializable{
     /// @param _phaseSupply GoldX amount in one phase
     /// @param _phaseCount amount of phases
     /// @param _coeffs FuseG : GoldX coefficient for each phase
-    function setNewRound(uint256 _phaseSupply, uint8 _phaseCount, uint256[] memory _coeffs) public onlyRole(SUPPLY_ROLE) {
+    function setNewRound(uint256 _phaseSupply, uint8 _phaseCount, uint256[] memory _coeffs) external onlyRole(SUPPLY_ROLE) {
         require(vaultDepleted, "RV: PREVIOUS ROUND HASN'T FINISHED YET");
         require(_coeffs.length == _phaseCount, "RV: COEFFS NUM != PHASE COUNT");
         require(
