@@ -21,7 +21,7 @@ contract MultiSigVault is IMultiSigVault, Ownable, Initializable {
     Proposal[] public proposals;
 
     modifier onlySigner() {
-        require(signers.contains(msg.sender), "MV: NOT THE SIGNER");
+        require(signers.contains(msg.sender), "MV: NOT A SIGNER");
         _;
     }
 
@@ -66,6 +66,15 @@ contract MultiSigVault is IMultiSigVault, Ownable, Initializable {
         goldX = IERC20(_goldX);
         rewardVault = IRewardVault(_rewardVault);
     }    
+
+    /// @notice Sets new round
+    /// @param _phaseSupply GoldX amount in one phase
+    /// @param _phaseCount amount of phases
+    /// @param _coeffs FuseG : GoldX coefficient for each phase
+    function setNewRound(uint256 _phaseSupply, uint8 _phaseCount, uint256[] memory _coeffs) public onlyOwner {
+        rewardVault.setNewRound(_phaseSupply, _phaseCount, _coeffs);
+    }
+
     /// @notice Submits the proposal 
     /// @param _proposalType see Proposals enum 
     /// @param _to subject of the proposal 
@@ -89,14 +98,6 @@ contract MultiSigVault is IMultiSigVault, Ownable, Initializable {
         );
 
         emit SubmitProposal(msg.sender, _proposalType, proposalIndex, _to, _amount);
-    }
-
-    /// @notice Sets new round
-    /// @param _phaseSupply GoldX amount in one phase
-    /// @param _phaseCount amount of phases
-    /// @param _coeffs FuseG : GoldX coefficient for each phase
-    function setNewRound(uint256 _phaseSupply, uint8 _phaseCount, uint256[] memory _coeffs) public onlyOwner {
-        rewardVault.setNewRound(_phaseSupply, _phaseCount, _coeffs);
     }
 
     /// @notice confirms the proposal
@@ -193,5 +194,15 @@ contract MultiSigVault is IMultiSigVault, Ownable, Initializable {
             proposal.executed,
             proposal.numConfirmations
         );
+    }
+
+    /// @notice returns reward vault address
+    function getRewardVault() public view returns(address) {
+        return address(rewardVault);
+    }
+
+    /// @notice returns GOLDX address
+    function getGoldX() public view returns(address) {
+        return address(goldX);
     }
 }
