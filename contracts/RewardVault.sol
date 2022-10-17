@@ -121,4 +121,9 @@ contract RewardVault is IRewardVault, Ownable, AccessControl, Initializable{
         phase = uint8(minedAmount / phaseSupply);
         remainingPhaseSupply = phaseSupply - (minedAmount % phaseSupply);
     }
+
+    /// @notice returns GOLDX address
+    function getGoldX() public view returns(address) {
+        return address(goldX);
+    }
 }
