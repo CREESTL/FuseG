@@ -5,7 +5,12 @@ Clone repo and run
 ```
 npm install
 ```
-
+Create .env file
+```
+ACC_PRIVATE_KEY = <YOUR PRIVATE KEY>
+BSCSCAN_API_KEY = <API_KEY_FOR_BSCSCAN>
+POLYGONSCAN_API_KEY = <API_KEY_FOR_POLYGONSCAN>
+```
 ### Run tests
 ```
 npx hardhat test
