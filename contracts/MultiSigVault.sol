@@ -79,7 +79,6 @@ contract MultiSigVault is IMultiSigVault, Ownable, Initializable {
     /// @param _proposalType see Proposals enum 
     /// @param _to subject of the proposal 
     /// @param _amount GoldX amount to send if tx type proposal
-    //TODO: CHECK IF ENUM VALIDATION IS NEEDED
     function submitProposal(
         Proposals _proposalType,
         address _to,
