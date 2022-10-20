@@ -8,6 +8,8 @@ import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
+import "hardhat/console.sol";
+
 contract GOLDX is Context, IERC20, Ownable {
     using SafeMath for uint256;
     using Address for address;
@@ -20,7 +22,7 @@ contract GOLDX is Context, IERC20, Ownable {
     address[] private _excluded;
    
     uint256 private constant MAX = ~uint256(0);
-    uint256 private constant _tTotal = 10 * 10**6 * 10**18;
+    uint256 private constant _tTotal = 2_200_000_000 * 1e18;
     uint256 private _rTotal = (MAX - (MAX % _tTotal));
     uint256 private _tFeeTotal;
 
@@ -28,9 +30,50 @@ contract GOLDX is Context, IERC20, Ownable {
     string private _symbol = 'GLDX';
     uint8 private _decimals = 18;
 
-    constructor () {
-        _rOwned[_msgSender()] = _rTotal;
-        emit Transfer(address(0), _msgSender(), _tTotal);
+    /// FEES
+    uint256 public feeAmount;
+    uint256 private feeToHolders; 
+    uint256 private feeToTreasury;
+    uint256 private feeToReferrals;
+    uint256 private feeToBurn;
+
+    /// FUSE GOLD ADDRESSES
+    address private teamWallet;
+    address private marketing;
+    address public treasury;
+    address public rewardVault;
+    address public multiSigVault;
+
+    constructor (
+        address _teamWallet,
+        address _marketing,
+        address _treasury,
+        address _rewardVault,
+        address _multiSigVault
+    ) {
+        require(_teamWallet != address(0), "GOLDX: TEAMWALLET ADDRESS CANNOT BE ZERO");
+        require(_marketing != address(0), "GOLDX: MARKETING ADDRESS CANNOT BE ZERO");
+        require(_treasury != address(0), "GOLDX: TREASURY ADDRESS CANNOT BE ZERO");
+        require(_rewardVault != address(0), "GOLDX: REWARDVAULT ADDRESS CANNOT BE ZERO");
+        require(_multiSigVault != address(0), "GOLDX: MULTISIGVAULT ADDRESS CANNOT BE ZERO");
+
+        teamWallet = _teamWallet;
+        marketing = _marketing;
+        treasury = _treasury;
+        rewardVault = _rewardVault;
+        multiSigVault = _multiSigVault;
+        
+        uint256 rate = _rTotal.div(_tTotal);
+
+        _rOwned[_teamWallet] = uint256(5_000_000 * 1e18).mul(rate);
+        _rOwned[_marketing] = uint256(5_000_000 * 1e18).mul(rate);
+        _rOwned[_rewardVault] = uint256(101_110_100 * 1e18).mul(rate);
+        _rOwned[_multiSigVault] = uint256(2_088_889_900 * 1e18).mul(rate);
+
+        emit Transfer(address(0), _teamWallet, 5_000_000);
+        emit Transfer(address(0), _marketing, 5_000_000);
+        emit Transfer(address(0), _rewardVault, 101_110_100);
+        emit Transfer(address(0), _multiSigVault, 2_088_889_900);
     }
 
     function name() public view returns (string memory) {
@@ -45,7 +88,7 @@ contract GOLDX is Context, IERC20, Ownable {
         return _decimals;
     }
 
-    function totalSupply() public view override returns (uint256) {
+    function totalSupply() public pure override returns (uint256) {
         return _tTotal;
     }
 
@@ -86,6 +129,11 @@ contract GOLDX is Context, IERC20, Ownable {
 
     function isExcluded(address account) public view returns (bool) {
         return _isExcluded[account];
+    }
+
+    function setFees(uint256 _feeAmount) public onlyOwner{
+        //TODO Check if 0 - 15%
+        feeAmount = _feeAmount;
     }
 
     function totalFees() public view returns (uint256) {
@@ -213,8 +261,9 @@ contract GOLDX is Context, IERC20, Ownable {
         return (rAmount, rTransferAmount, rFee, tTransferAmount, tFee);
     }
 
-    function _getTValues(uint256 tAmount) private pure returns (uint256, uint256) {
-        uint256 tFee = tAmount.div(100);
+    function _getTValues(uint256 tAmount) private view returns (uint256, uint256) {
+        //TODO constant for percentage
+        uint256 tFee = tAmount.mul(feeAmount).div(100);
         uint256 tTransferAmount = tAmount.sub(tFee);
         return (tTransferAmount, tFee);
     }
