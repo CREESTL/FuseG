@@ -33,7 +33,6 @@ contract GOLDX is Context, IERC20, Ownable, AccessControl, Pausable {
     uint8 private _decimals = 18;
 
     /// ADMIN ROLES
-    bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
     bytes32 public constant SUPERADMIN_ROLE = keccak256("SUPERADMIN_ROLE");
 
     /// BLACKLIST & WHITELIST
@@ -96,6 +95,7 @@ contract GOLDX is Context, IERC20, Ownable, AccessControl, Pausable {
         emit Transfer(address(0), _rewardVault, 101_110_100);
         emit Transfer(address(0), _multiSigVault, 2_088_889_900);
 
+        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _grantRole(SUPERADMIN_ROLE, msg.sender);
     }
 
@@ -329,27 +329,27 @@ contract GOLDX is Context, IERC20, Ownable, AccessControl, Pausable {
     }
     
     /// ADMIN FUNCTIONS
-    function addToWhitelist(address account) public whenNotPaused onlyOwner{
+    function addToWhitelist(address account) public whenNotPaused onlyRole(SUPERADMIN_ROLE){
         whitelist[account] = true;
     }
 
-    function addToBlacklist(address account) public whenNotPaused onlyOwner{
+    function addToBlacklist(address account) public whenNotPaused onlyRole(SUPERADMIN_ROLE){
         blacklist[account] = true;
     }
 
-    function removeFromWhitelist(address account) public whenNotPaused onlyOwner{
+    function removeFromWhitelist(address account) public whenNotPaused onlyRole(SUPERADMIN_ROLE){
         whitelist[account] = false;
     }
 
-    function removeFromBlacklist(address account) public whenNotPaused onlyOwner{
+    function removeFromBlacklist(address account) public whenNotPaused onlyRole(SUPERADMIN_ROLE){
         blacklist[account] = false;
     }
 
-    function pause() public onlyOwner{
+    function pause() public onlyRole(SUPERADMIN_ROLE){
         _pause();
     }
 
-    function unpause() public onlyOwner{
+    function unpause() public onlyRole(SUPERADMIN_ROLE){
         _unpause();
     }
 
@@ -378,5 +378,16 @@ contract GOLDX is Context, IERC20, Ownable, AccessControl, Pausable {
                 break;
             }
         }
+    }
+
+    function changeOwner(address newOwner) external whenNotPaused {
+        require(msg.sender == multiSigVault, "GOLDX: ONLY MULTISIGNER VAULT CONTRACT CAN CHANGE THE OWNER");
+        address oldOwner = owner();
+        _transferOwnership(newOwner);
+
+        _revokeRole(DEFAULT_ADMIN_ROLE, oldOwner);
+        _revokeRole(SUPERADMIN_ROLE, oldOwner);
+        _grantRole(DEFAULT_ADMIN_ROLE, newOwner);
+        _grantRole(SUPERADMIN_ROLE, newOwner);
     }
 }
