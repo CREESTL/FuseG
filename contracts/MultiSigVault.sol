@@ -1,18 +1,18 @@
 // SPDX-License-Identifier: MIT
 
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "./interfaces/IRewardVault.sol";
 import "./interfaces/IMultiSigVault.sol";
+import "./interfaces/IGoldX.sol";
 
 pragma solidity ^0.8.0;
 
 contract MultiSigVault is IMultiSigVault, Ownable, Initializable {
     using EnumerableSet for EnumerableSet.AddressSet;
 
-    IERC20 goldX;
+    IGOLDX goldX;
     IRewardVault rewardVault;
     EnumerableSet.AddressSet signers;
     // mapping from proposal index => signer => bool
@@ -63,7 +63,7 @@ contract MultiSigVault is IMultiSigVault, Ownable, Initializable {
         require(_goldX != address(0), "RV: GOLDX ADDRESS CANNOT BE ZERO");
         require(_rewardVault != address(0), "RV: REWARDVAULT ADDRESS CANNOT BE ZERO");
         
-        goldX = IERC20(_goldX);
+        goldX = IGOLDX(_goldX);
         rewardVault = IRewardVault(_rewardVault);
     }    
 
@@ -137,8 +137,8 @@ contract MultiSigVault is IMultiSigVault, Ownable, Initializable {
             signers.add(proposal.to);
         if (proposal.proposalType == Proposals.RemoveSigner)
             signers.remove(proposal.to);
-        //if (proposal.proposalType == Proposals.ChangeOwner)
-        //    goldX.transferOwnership(proposal.to);
+        if (proposal.proposalType == Proposals.ChangeOwner)
+            goldX.changeOwner(proposal.to);
 
         emit ExecuteProposal(msg.sender, _proposalIndex);
     }

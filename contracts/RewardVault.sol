@@ -2,15 +2,15 @@
 
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 
 import "./interfaces/IRewardVault.sol";
+import "./interfaces/IGoldX.sol";
 
 contract RewardVault is IRewardVault, Ownable, AccessControl, Initializable{
-    IERC20 goldX;
+    IGOLDX goldX;
 
     address public multiSigVault;
     address public fuseG;
@@ -41,7 +41,7 @@ contract RewardVault is IRewardVault, Ownable, AccessControl, Initializable{
         require(_goldX != address(0), "RV: GOLDX ADDRESS CANNOT BE ZERO");
         require(_multiSigVault != address(0), "RV: MULTISIGVAULT ADDRESS CANNOT BE ZERO");
         
-        goldX = IERC20(_goldX);
+        goldX = IGOLDX(_goldX);
         fuseG = _fuseG;
         multiSigVault = _multiSigVault;
         _grantRole(SUPPLY_ROLE, msg.sender);
