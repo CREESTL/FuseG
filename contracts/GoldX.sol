@@ -32,6 +32,10 @@ contract GOLDX is Context, IERC20, Ownable, AccessControl, Pausable {
     string private _symbol = 'GLDX';
     uint8 private _decimals = 18;
 
+    /// ADMIN ROLES
+    bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
+    bytes32 public constant SUPERADMIN_ROLE = keccak256("SUPERADMIN_ROLE");
+
     /// BLACKLIST & WHITELIST
     mapping (address => bool) public blacklist;
     mapping (address => bool) public whitelist;
@@ -91,6 +95,8 @@ contract GOLDX is Context, IERC20, Ownable, AccessControl, Pausable {
         emit Transfer(address(0), _marketing, 5_000_000);
         emit Transfer(address(0), _rewardVault, 101_110_100);
         emit Transfer(address(0), _multiSigVault, 2_088_889_900);
+
+        _grantRole(SUPERADMIN_ROLE, msg.sender);
     }
 
     function name() public view returns (string memory) {
