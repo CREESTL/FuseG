@@ -9,13 +9,13 @@ const arrToBN = (arr) => {
 
 describe("Reward vault", () => {
     beforeEach( async () => {
-        [fuseG, team, marketing, multiSigVault, alice, bob] = await ethers.getSigners();
+        [fuseG, team, marketing, treasury, multiSigVault, alice, bob] = await ethers.getSigners();
 
         let RewardVault = await ethers.getContractFactory("RewardVault");
         rewardVault = await RewardVault.deploy();
 
         let GoldX = await ethers.getContractFactory("GOLDX");
-        goldX = await GoldX.deploy(team.address, marketing.address, rewardVault.address, multiSigVault.address);
+        goldX = await GoldX.deploy(team.address, marketing.address, treasury.address, rewardVault.address, multiSigVault.address);
 
         await rewardVault.initialize(fuseG.address, goldX.address, multiSigVault.address);
     });
