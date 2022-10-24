@@ -22,7 +22,7 @@ contract GOLDX is Context, IERC20, Ownable {
     address[] private _excluded;
    
     uint256 private constant MAX = ~uint256(0);
-    uint256 private constant _tTotal = 2_200_000_000 * 1e18;
+    uint256 private _tTotal = 2_200_000_000 * 1e18;
     uint256 private _rTotal = (MAX - (MAX % _tTotal));
     uint256 private _tFeeTotal;
 
@@ -31,6 +31,7 @@ contract GOLDX is Context, IERC20, Ownable {
     uint8 private _decimals = 18;
 
     /// FEES
+    uint256 private constant PCT_RATE = 100;
     uint256 public feeAmount;
     uint256 private feeToHolders; 
     uint256 private feeToTreasury;
@@ -43,6 +44,11 @@ contract GOLDX is Context, IERC20, Ownable {
     address public treasury;
     address public rewardVault;
     address public multiSigVault;
+
+    /// REFERRAL PROGRAM
+    // referral => referrer
+    mapping(address => address) public referrer;
+    uint256 public referralReward;
 
     constructor (
         address _teamWallet,
@@ -88,7 +94,7 @@ contract GOLDX is Context, IERC20, Ownable {
         return _decimals;
     }
 
-    function totalSupply() public pure override returns (uint256) {
+    function totalSupply() public view override returns (uint256) {
         return _tTotal;
     }
 
@@ -132,8 +138,18 @@ contract GOLDX is Context, IERC20, Ownable {
     }
 
     function setFees(uint256 _feeAmount) public onlyOwner{
-        //TODO Check if 0 - 15%
+        require(_feeAmount >= 0 && _feeAmount <= 15, "GOLDX: 0% >= TRANSACTION FEE <= 15%");
         feeAmount = _feeAmount;
+    }
+
+    function setFeeDistribution(uint256 _toHolders, uint256 _toTreasury, uint256 _toBurn, uint256 _toReferrals) public onlyOwner{
+        require(feeAmount !=0, "GOLDX: TRANSACTION FEE IS ZERO");
+        uint256 sum = _toHolders + _toTreasury + _toBurn + _toReferrals;
+        require(sum.div(10) == feeAmount, "GOLDX: WRONG DISTRIBUTION, SUM MUST EQUAL FEE");
+        feeToHolders = _toHolders;
+        feeToTreasury = _toTreasury;
+        feeToBurn = _toBurn;
+        feeToReferrals = _toReferrals;
     }
 
     function totalFees() public view returns (uint256) {
@@ -164,6 +180,11 @@ contract GOLDX is Context, IERC20, Ownable {
         require(rAmount <= _rTotal, "Amount must be less than total reflections");
         uint256 currentRate =  _getRate();
         return rAmount.div(currentRate);
+    }
+
+    //TODO
+    function addReferral(address referral) public {
+        referrer[msg.sender] = referral;
     }
 
     function excludeAccount(address account) external onlyOwner() {
@@ -217,7 +238,7 @@ contract GOLDX is Context, IERC20, Ownable {
         (uint256 rAmount, uint256 rTransferAmount, uint256 rFee, uint256 tTransferAmount, uint256 tFee) = _getValues(tAmount);
         _rOwned[sender] = _rOwned[sender].sub(rAmount);
         _rOwned[recipient] = _rOwned[recipient].add(rTransferAmount);       
-        _reflectFee(rFee, tFee);
+        _reflectAndProcessFee(rFee, tFee);
         emit Transfer(sender, recipient, tTransferAmount);
     }
 
@@ -226,7 +247,7 @@ contract GOLDX is Context, IERC20, Ownable {
         _rOwned[sender] = _rOwned[sender].sub(rAmount);
         _tOwned[recipient] = _tOwned[recipient].add(tTransferAmount);
         _rOwned[recipient] = _rOwned[recipient].add(rTransferAmount);           
-        _reflectFee(rFee, tFee);
+        _reflectAndProcessFee(rFee, tFee);
         emit Transfer(sender, recipient, tTransferAmount);
     }
 
@@ -235,7 +256,7 @@ contract GOLDX is Context, IERC20, Ownable {
         _tOwned[sender] = _tOwned[sender].sub(tAmount);
         _rOwned[sender] = _rOwned[sender].sub(rAmount);
         _rOwned[recipient] = _rOwned[recipient].add(rTransferAmount);   
-        _reflectFee(rFee, tFee);
+        _reflectAndProcessFee(rFee, tFee);
         emit Transfer(sender, recipient, tTransferAmount);
     }
 
@@ -245,13 +266,27 @@ contract GOLDX is Context, IERC20, Ownable {
         _rOwned[sender] = _rOwned[sender].sub(rAmount);
         _tOwned[recipient] = _tOwned[recipient].add(tTransferAmount);
         _rOwned[recipient] = _rOwned[recipient].add(rTransferAmount);        
-        _reflectFee(rFee, tFee);
+        _reflectAndProcessFee(rFee, tFee);
         emit Transfer(sender, recipient, tTransferAmount);
     }
 
-    function _reflectFee(uint256 rFee, uint256 tFee) private {
-        _rTotal = _rTotal.sub(rFee);
+    function _reflectAndProcessFee(uint256 rFee, uint256 tFee) private {
+    /// TODO MAKE BURN AND MINT FUNCTIONS
+        (uint256 rToHolders, uint256 rToTreasury, uint256 rToBurn, uint256 rToReferrals) = _getFeeDistribution(rFee);
+        uint256 tToBurn = tokenFromReflection(rToBurn);
+
+        if(referrer[msg.sender] != address(0)) {
+            _rOwned[msg.sender] = _rOwned[msg.sender].add(rToReferrals.div(2));
+            _rOwned[referrer[msg.sender]] = _rOwned[referrer[msg.sender]].add(rToReferrals.div(2));
+        } else {
+            referralReward = referralReward.add(rToReferrals);
+        }
+
+        _rOwned[treasury] = _rOwned[treasury].add(rToTreasury);
+        _rTotal = _rTotal.sub(rToHolders).sub(rToBurn);
+        _tTotal = _tTotal.sub(tToBurn);
         _tFeeTotal = _tFeeTotal.add(tFee);
+        emit Transfer(msg.sender, address(0), tToBurn);
     }
 
     function _getValues(uint256 tAmount) private view returns (uint256, uint256, uint256, uint256, uint256) {
@@ -262,8 +297,7 @@ contract GOLDX is Context, IERC20, Ownable {
     }
 
     function _getTValues(uint256 tAmount) private view returns (uint256, uint256) {
-        //TODO constant for percentage
-        uint256 tFee = tAmount.mul(feeAmount).div(100);
+        uint256 tFee = tAmount.mul(feeAmount).div(PCT_RATE);
         uint256 tTransferAmount = tAmount.sub(tFee);
         return (tTransferAmount, tFee);
     }
@@ -273,6 +307,14 @@ contract GOLDX is Context, IERC20, Ownable {
         uint256 rFee = tFee.mul(currentRate);
         uint256 rTransferAmount = rAmount.sub(rFee);
         return (rAmount, rTransferAmount, rFee);
+    }
+
+    function _getFeeDistribution(uint256 rFee) private view returns (uint256, uint256, uint256, uint256) {
+        uint256 rToHolders = rFee.mul(feeToHolders).div(PCT_RATE);
+        uint256 rToTreasury = rFee.mul(feeToTreasury).div(PCT_RATE);
+        uint256 rToBurn = rFee.mul(feeToBurn).div(PCT_RATE);
+        uint256 rToReferrals = rFee.mul(feeToReferrals).div(PCT_RATE);
+        return (rToHolders, rToTreasury, rToBurn, rToReferrals);
     }
 
     function _getRate() private view returns(uint256) {
