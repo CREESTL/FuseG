@@ -8,6 +8,7 @@ import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
+import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "./interfaces/IGoldX.sol";
 
 import "hardhat/console.sol";
@@ -15,6 +16,7 @@ import "hardhat/console.sol";
 contract GOLDX is Context, IGOLDX, Ownable, AccessControl, Pausable {
     using SafeMath for uint256;
     using Address for address;
+    using EnumerableSet for EnumerableSet.AddressSet;
 
     mapping (address => uint256) private _rOwned;
     mapping (address => uint256) private _tOwned;
@@ -57,7 +59,12 @@ contract GOLDX is Context, IGOLDX, Ownable, AccessControl, Pausable {
     /// REFERRAL PROGRAM
     // referral => referrer
     mapping (address => address) public referrer;
-    uint256 public referralReward;
+    mapping (address => uint256) public referralReward;
+    EnumerableSet.AddressSet referrers;
+    EnumerableSet.AddressSet referrals;
+    uint256 public totalReferralReward;
+
+
 
     modifier notInBlacklist(address account) {
         require(!blacklist[account], "GOLDX: USER IS BLACKLISTED");
@@ -116,7 +123,10 @@ contract GOLDX is Context, IGOLDX, Ownable, AccessControl, Pausable {
     }
 
     function balanceOf(address account) public view override returns (uint256) {
-        if (_isExcluded[account]) return _tOwned[account];
+        if (_isExcluded[account]) 
+            return _tOwned[account];
+        if (referrers.contains(account) || referrals.contains(account))
+            return tokenFromReflection(_rOwned[account]) + getReferralReward() - referralReward[account];
         return tokenFromReflection(_rOwned[account]);
     }
 
@@ -269,7 +279,7 @@ contract GOLDX is Context, IGOLDX, Ownable, AccessControl, Pausable {
             _rOwned[msg.sender] = _rOwned[msg.sender].add(rToReferrals.div(2));
             _rOwned[referrer[msg.sender]] = _rOwned[referrer[msg.sender]].add(rToReferrals.div(2));
         } else {
-            referralReward = referralReward.add(rToReferrals);
+            totalReferralReward = totalReferralReward.add(rToReferrals);
         }
 
         _rOwned[treasury] = _rOwned[treasury].add(rToTreasury);
@@ -353,11 +363,6 @@ contract GOLDX is Context, IGOLDX, Ownable, AccessControl, Pausable {
         _unpause();
     }
 
-    //TODO
-    function addReferral(address referral) public whenNotPaused {
-        referrer[msg.sender] = referral;
-    }
-
     function excludeAccount(address account) external whenNotPaused onlyOwner() {
         require(!_isExcluded[account], "Account is already excluded");
         if(_rOwned[account] > 0) {
@@ -389,5 +394,40 @@ contract GOLDX is Context, IGOLDX, Ownable, AccessControl, Pausable {
         _revokeRole(SUPERADMIN_ROLE, oldOwner);
         _grantRole(DEFAULT_ADMIN_ROLE, newOwner);
         _grantRole(SUPERADMIN_ROLE, newOwner);
+    }
+
+    /// REFERRAL PROGRAMM FUNCTIONS
+    function addReferrer(address account) public whenNotPaused onlyOwner {
+        require(!referrers.contains(account), "GOLDX: REFERRER ALREADY EXISTS");
+        referrers.add(account);
+        referralReward[account] = getReferralReward();
+    }
+
+    function addReferrers(address[] memory accounts) public whenNotPaused onlyOwner {
+        for(uint256 i = 0; i < accounts.length; i++) {
+            addReferrer(accounts[i]);
+        }
+    }
+
+    function bindReferrerToReferral(address _referrer) public whenNotPaused {
+        require(referrers.contains(_referrer), "GOLDX: REFERRER DOES NOT EXIST");
+        referrer[msg.sender] = _referrer;
+        if(!referrals.contains(msg.sender)) {
+            referrals.add(msg.sender);
+            referralReward[msg.sender] = getReferralReward();
+        }
+    }
+
+    function getReferrer() public view returns(address) {
+        return referrer[msg.sender];
+    }
+
+    function getReferrersList() public view returns(address[] memory) {
+        return referrers.values();
+    }
+
+    function getReferralReward() public view returns(uint256) {
+        uint256 referralProgrammAccounts = referrers.length() + referrals.length();
+        return totalReferralReward / referralProgrammAccounts;
     }
 }
