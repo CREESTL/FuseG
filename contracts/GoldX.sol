@@ -3,14 +3,16 @@
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/utils/Context.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/access/AccessControl.sol";
+import "@openzeppelin/contracts/security/Pausable.sol";
+import "./interfaces/IGoldX.sol";
 
 import "hardhat/console.sol";
 
-contract GOLDX is Context, IERC20, Ownable {
+contract GOLDX is Context, IGOLDX, Ownable, AccessControl, Pausable {
     using SafeMath for uint256;
     using Address for address;
 
@@ -30,6 +32,13 @@ contract GOLDX is Context, IERC20, Ownable {
     string private _symbol = 'GLDX';
     uint8 private _decimals = 18;
 
+    /// ADMIN ROLES
+    bytes32 public constant SUPERADMIN_ROLE = keccak256("SUPERADMIN_ROLE");
+
+    /// BLACKLIST & WHITELIST
+    mapping (address => bool) public blacklist;
+    mapping (address => bool) public whitelist;
+
     /// FEES
     uint256 private constant PCT_RATE = 100;
     uint256 public feeAmount;
@@ -47,8 +56,13 @@ contract GOLDX is Context, IERC20, Ownable {
 
     /// REFERRAL PROGRAM
     // referral => referrer
-    mapping(address => address) public referrer;
+    mapping (address => address) public referrer;
     uint256 public referralReward;
+
+    modifier notInBlacklist(address account) {
+        require(!blacklist[account], "GOLDX: USER IS BLACKLISTED");
+        _;
+    }
 
     constructor (
         address _teamWallet,
@@ -80,6 +94,9 @@ contract GOLDX is Context, IERC20, Ownable {
         emit Transfer(address(0), _marketing, 5_000_000);
         emit Transfer(address(0), _rewardVault, 101_110_100);
         emit Transfer(address(0), _multiSigVault, 2_088_889_900);
+
+        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
+        _grantRole(SUPERADMIN_ROLE, msg.sender);
     }
 
     function name() public view returns (string memory) {
@@ -103,7 +120,7 @@ contract GOLDX is Context, IERC20, Ownable {
         return tokenFromReflection(_rOwned[account]);
     }
 
-    function transfer(address recipient, uint256 amount) public override returns (bool) {
+    function transfer(address recipient, uint256 amount) public override whenNotPaused returns (bool) {
         _transfer(_msgSender(), recipient, amount);
         return true;
     }
@@ -112,23 +129,23 @@ contract GOLDX is Context, IERC20, Ownable {
         return _allowances[owner][spender];
     }
 
-    function approve(address spender, uint256 amount) public override returns (bool) {
+    function approve(address spender, uint256 amount) public override whenNotPaused returns (bool) {
         _approve(_msgSender(), spender, amount);
         return true;
     }
 
-    function transferFrom(address sender, address recipient, uint256 amount) public override returns (bool) {
+    function transferFrom(address sender, address recipient, uint256 amount) public override whenNotPaused returns (bool) {
         _transfer(sender, recipient, amount);
         _approve(sender, _msgSender(), _allowances[sender][_msgSender()].sub(amount, "ERC20: transfer amount exceeds allowance"));
         return true;
     }
 
-    function increaseAllowance(address spender, uint256 addedValue) public virtual returns (bool) {
+    function increaseAllowance(address spender, uint256 addedValue) public virtual whenNotPaused returns (bool) {
         _approve(_msgSender(), spender, _allowances[_msgSender()][spender].add(addedValue));
         return true;
     }
 
-    function decreaseAllowance(address spender, uint256 subtractedValue) public virtual returns (bool) {
+    function decreaseAllowance(address spender, uint256 subtractedValue) public virtual whenNotPaused returns (bool) {
         _approve(_msgSender(), spender, _allowances[_msgSender()][spender].sub(subtractedValue, "ERC20: decreased allowance below zero"));
         return true;
     }
@@ -137,12 +154,12 @@ contract GOLDX is Context, IERC20, Ownable {
         return _isExcluded[account];
     }
 
-    function setFees(uint256 _feeAmount) public onlyOwner{
+    function setFees(uint256 _feeAmount) public whenNotPaused onlyOwner{
         require(_feeAmount >= 0 && _feeAmount <= 15, "GOLDX: 0% >= TRANSACTION FEE <= 15%");
         feeAmount = _feeAmount;
     }
 
-    function setFeeDistribution(uint256 _toHolders, uint256 _toTreasury, uint256 _toBurn, uint256 _toReferrals) public onlyOwner{
+    function setFeeDistribution(uint256 _toHolders, uint256 _toTreasury, uint256 _toBurn, uint256 _toReferrals) public whenNotPaused onlyOwner{
         require(feeAmount !=0, "GOLDX: TRANSACTION FEE IS ZERO");
         uint256 sum = _toHolders + _toTreasury + _toBurn + _toReferrals;
         require(sum.div(10) == feeAmount, "GOLDX: WRONG DISTRIBUTION, SUM MUST EQUAL FEE");
@@ -156,7 +173,7 @@ contract GOLDX is Context, IERC20, Ownable {
         return _tFeeTotal;
     }
 
-    function reflect(uint256 tAmount) public {
+    function reflect(uint256 tAmount) public whenNotPaused {
         address sender = _msgSender();
         require(!_isExcluded[sender], "Excluded addresses cannot call this function");
         (uint256 rAmount,,,,) = _getValues(tAmount);
@@ -182,33 +199,6 @@ contract GOLDX is Context, IERC20, Ownable {
         return rAmount.div(currentRate);
     }
 
-    //TODO
-    function addReferral(address referral) public {
-        referrer[msg.sender] = referral;
-    }
-
-    function excludeAccount(address account) external onlyOwner() {
-        require(!_isExcluded[account], "Account is already excluded");
-        if(_rOwned[account] > 0) {
-            _tOwned[account] = tokenFromReflection(_rOwned[account]);
-        }
-        _isExcluded[account] = true;
-        _excluded.push(account);
-    }
-
-    function includeAccount(address account) external onlyOwner() {
-        require(_isExcluded[account], "Account is already excluded");
-        for (uint256 i = 0; i < _excluded.length; i++) {
-            if (_excluded[i] == account) {
-                _excluded[i] = _excluded[_excluded.length - 1];
-                _tOwned[account] = 0;
-                _isExcluded[account] = false;
-                _excluded.pop();
-                break;
-            }
-        }
-    }
-
     function _approve(address owner, address spender, uint256 amount) private {
         require(owner != address(0), "ERC20: approve from the zero address");
         require(spender != address(0), "ERC20: approve to the zero address");
@@ -217,7 +207,7 @@ contract GOLDX is Context, IERC20, Ownable {
         emit Approval(owner, spender, amount);
     }
 
-    function _transfer(address sender, address recipient, uint256 amount) private {
+    function _transfer(address sender, address recipient, uint256 amount) private notInBlacklist(sender) {
         require(sender != address(0), "ERC20: transfer from the zero address");
         require(recipient != address(0), "ERC20: transfer to the zero address");
         require(amount > 0, "Transfer amount must be greater than zero");
@@ -297,7 +287,11 @@ contract GOLDX is Context, IERC20, Ownable {
     }
 
     function _getTValues(uint256 tAmount) private view returns (uint256, uint256) {
-        uint256 tFee = tAmount.mul(feeAmount).div(PCT_RATE);
+        uint256 tFee;
+        // Whitelisted users don't pay fees
+        if(!whitelist[msg.sender])
+            tFee = tAmount.mul(feeAmount).div(PCT_RATE);
+
         uint256 tTransferAmount = tAmount.sub(tFee);
         return (tTransferAmount, tFee);
     }
@@ -332,5 +326,68 @@ contract GOLDX is Context, IERC20, Ownable {
         }
         if (rSupply < _rTotal.div(_tTotal)) return (_rTotal, _tTotal);
         return (rSupply, tSupply);
+    }
+    
+    /// ADMIN FUNCTIONS
+    function addToWhitelist(address account) public whenNotPaused onlyRole(SUPERADMIN_ROLE){
+        whitelist[account] = true;
+    }
+
+    function addToBlacklist(address account) public whenNotPaused onlyRole(SUPERADMIN_ROLE){
+        blacklist[account] = true;
+    }
+
+    function removeFromWhitelist(address account) public whenNotPaused onlyRole(SUPERADMIN_ROLE){
+        whitelist[account] = false;
+    }
+
+    function removeFromBlacklist(address account) public whenNotPaused onlyRole(SUPERADMIN_ROLE){
+        blacklist[account] = false;
+    }
+
+    function pause() public onlyRole(SUPERADMIN_ROLE){
+        _pause();
+    }
+
+    function unpause() public onlyRole(SUPERADMIN_ROLE){
+        _unpause();
+    }
+
+    //TODO
+    function addReferral(address referral) public whenNotPaused {
+        referrer[msg.sender] = referral;
+    }
+
+    function excludeAccount(address account) external whenNotPaused onlyOwner() {
+        require(!_isExcluded[account], "Account is already excluded");
+        if(_rOwned[account] > 0) {
+            _tOwned[account] = tokenFromReflection(_rOwned[account]);
+        }
+        _isExcluded[account] = true;
+        _excluded.push(account);
+    }
+
+    function includeAccount(address account) external whenNotPaused onlyOwner() {
+        require(_isExcluded[account], "Account is already excluded");
+        for (uint256 i = 0; i < _excluded.length; i++) {
+            if (_excluded[i] == account) {
+                _excluded[i] = _excluded[_excluded.length - 1];
+                _tOwned[account] = 0;
+                _isExcluded[account] = false;
+                _excluded.pop();
+                break;
+            }
+        }
+    }
+
+    function changeOwner(address newOwner) external whenNotPaused {
+        require(msg.sender == multiSigVault, "GOLDX: ONLY MULTISIGNER VAULT CONTRACT CAN CHANGE THE OWNER");
+        address oldOwner = owner();
+        _transferOwnership(newOwner);
+
+        _revokeRole(DEFAULT_ADMIN_ROLE, oldOwner);
+        _revokeRole(SUPERADMIN_ROLE, oldOwner);
+        _grantRole(DEFAULT_ADMIN_ROLE, newOwner);
+        _grantRole(SUPERADMIN_ROLE, newOwner);
     }
 }
