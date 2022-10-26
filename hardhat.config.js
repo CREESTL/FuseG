@@ -51,5 +51,5 @@ module.exports = {
       bsc: BSCSCAN_API_KEY,
       polygon: POLYGONSCAN_API_KEY
     }
-  },
+  }
 };

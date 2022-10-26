@@ -34,7 +34,7 @@ describe('GOLDX Token', () => {
         treasuryBalance = await goldX.balanceOf(treasury.address);
         marketingBalance = await goldX.balanceOf(marketing.address);
         treasury = await goldX.balanceOf(treasury.address);
-        refReward = await goldX.referralReward();
+        refReward = await goldX.totalReferralReward();
         refReward = await goldX.tokenFromReflection(refReward);
         sum = teamBalance.add(userBalance).add(treasuryBalance).add(rvBalance).add(mvBalance).add(refReward).add(marketingBalance);
         console.log("Team: ", teamBalance/1e18)

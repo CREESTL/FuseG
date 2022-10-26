@@ -221,6 +221,12 @@ contract GOLDX is Context, IGOLDX, Ownable, AccessControl, Pausable {
         require(sender != address(0), "ERC20: transfer from the zero address");
         require(recipient != address(0), "ERC20: transfer to the zero address");
         require(amount > 0, "Transfer amount must be greater than zero");
+        
+        if (referrers.contains(sender) || referrals.contains(sender)) {
+            _rOwned[sender] = _rOwned[sender].add(getReferralReward());
+            referralReward[sender] = referralReward[sender].add(getReferralReward());
+        }
+
         if (_isExcluded[sender] && !_isExcluded[recipient]) {
             _transferFromExcluded(sender, recipient, amount);
         } else if (!_isExcluded[sender] && _isExcluded[recipient]) {
@@ -401,6 +407,7 @@ contract GOLDX is Context, IGOLDX, Ownable, AccessControl, Pausable {
         require(!referrers.contains(account), "GOLDX: REFERRER ALREADY EXISTS");
         referrers.add(account);
         referralReward[account] = getReferralReward();
+        totalReferralReward = totalReferralReward.add(getReferralReward());
     }
 
     function addReferrers(address[] memory accounts) public whenNotPaused onlyOwner {
@@ -415,6 +422,7 @@ contract GOLDX is Context, IGOLDX, Ownable, AccessControl, Pausable {
         if(!referrals.contains(msg.sender)) {
             referrals.add(msg.sender);
             referralReward[msg.sender] = getReferralReward();
+            totalReferralReward = totalReferralReward.add(getReferralReward());
         }
     }
 
