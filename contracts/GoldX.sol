@@ -125,8 +125,10 @@ contract GOLDX is Context, IGOLDX, Ownable, AccessControl, Pausable {
     function balanceOf(address account) public view override returns (uint256) {
         if (_isExcluded[account]) 
             return _tOwned[account];
-        if (referrers.contains(account) || referrals.contains(account))
-            return tokenFromReflection(_rOwned[account]) + getReferralReward() - referralReward[account];
+        if (referrers.contains(account) || referrals.contains(account)) {
+            uint256 totalReward = getReferralReward() - referralReward[account];
+            return tokenFromReflection(_rOwned[account] + totalReward);
+        }
         return tokenFromReflection(_rOwned[account]);
     }
 
@@ -280,7 +282,6 @@ contract GOLDX is Context, IGOLDX, Ownable, AccessControl, Pausable {
     /// TODO MAKE BURN AND MINT FUNCTIONS
         (uint256 rToHolders, uint256 rToTreasury, uint256 rToBurn, uint256 rToReferrals) = _getFeeDistribution(rFee);
         uint256 tToBurn = tokenFromReflection(rToBurn);
-
         if(referrer[msg.sender] != address(0)) {
             _rOwned[msg.sender] = _rOwned[msg.sender].add(rToReferrals.div(2));
             _rOwned[referrer[msg.sender]] = _rOwned[referrer[msg.sender]].add(rToReferrals.div(2));
@@ -405,9 +406,9 @@ contract GOLDX is Context, IGOLDX, Ownable, AccessControl, Pausable {
     /// REFERRAL PROGRAMM FUNCTIONS
     function addReferrer(address account) public whenNotPaused onlyOwner {
         require(!referrers.contains(account), "GOLDX: REFERRER ALREADY EXISTS");
-        referrers.add(account);
         referralReward[account] = getReferralReward();
         totalReferralReward = totalReferralReward.add(getReferralReward());
+        referrers.add(account);
     }
 
     function addReferrers(address[] memory accounts) public whenNotPaused onlyOwner {
@@ -420,9 +421,9 @@ contract GOLDX is Context, IGOLDX, Ownable, AccessControl, Pausable {
         require(referrers.contains(_referrer), "GOLDX: REFERRER DOES NOT EXIST");
         referrer[msg.sender] = _referrer;
         if(!referrals.contains(msg.sender)) {
-            referrals.add(msg.sender);
             referralReward[msg.sender] = getReferralReward();
             totalReferralReward = totalReferralReward.add(getReferralReward());
+            referrals.add(msg.sender);
         }
     }
 
@@ -436,6 +437,8 @@ contract GOLDX is Context, IGOLDX, Ownable, AccessControl, Pausable {
 
     function getReferralReward() public view returns(uint256) {
         uint256 referralProgrammAccounts = referrers.length() + referrals.length();
+        if (referralProgrammAccounts == 0)
+            return 0;
         return totalReferralReward / referralProgrammAccounts;
     }
 }
