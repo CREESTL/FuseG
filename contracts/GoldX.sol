@@ -62,7 +62,10 @@ contract GOLDX is Context, IGOLDX, Ownable, AccessControl, Pausable {
     mapping (address => uint256) public referralReward;
     EnumerableSet.AddressSet referrers;
     EnumerableSet.AddressSet referrals;
-    uint256 public totalReferralReward;
+    uint256 private totalReferralReward;
+    uint256 private _rReferralReward;
+    // referral rewards collected
+    uint256 public _tReferralReward;
 
 
 
@@ -102,6 +105,11 @@ contract GOLDX is Context, IGOLDX, Ownable, AccessControl, Pausable {
         emit Transfer(address(0), _rewardVault, 101_110_100);
         emit Transfer(address(0), _multiSigVault, 2_088_889_900);
 
+        excludeAccount(_rewardVault);
+        excludeAccount(_multiSigVault);
+        whitelist[_rewardVault] = true;
+        whitelist[_multiSigVault] = true;
+
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _grantRole(SUPERADMIN_ROLE, msg.sender);
     }
@@ -127,7 +135,7 @@ contract GOLDX is Context, IGOLDX, Ownable, AccessControl, Pausable {
             return _tOwned[account];
         if (referrers.contains(account) || referrals.contains(account)) {
             uint256 totalReward = getReferralReward() - referralReward[account];
-            return tokenFromReflection(_rOwned[account] + totalReward);
+            return tokenFromReflection(_rOwned[account]) + totalReward;
         }
         return tokenFromReflection(_rOwned[account]);
     }
@@ -282,14 +290,22 @@ contract GOLDX is Context, IGOLDX, Ownable, AccessControl, Pausable {
     /// TODO MAKE BURN AND MINT FUNCTIONS
         (uint256 rToHolders, uint256 rToTreasury, uint256 rToBurn, uint256 rToReferrals) = _getFeeDistribution(rFee);
         uint256 tToBurn = tokenFromReflection(rToBurn);
+        uint256 tToTreasury = tokenFromReflection(rToTreasury);
+        uint256 tToReferrals = tokenFromReflection(rToReferrals);
+
         if(referrer[msg.sender] != address(0)) {
             _rOwned[msg.sender] = _rOwned[msg.sender].add(rToReferrals.div(2));
             _rOwned[referrer[msg.sender]] = _rOwned[referrer[msg.sender]].add(rToReferrals.div(2));
         } else {
-            totalReferralReward = totalReferralReward.add(rToReferrals);
+            totalReferralReward = totalReferralReward.add(tToReferrals);
         }
 
         _rOwned[treasury] = _rOwned[treasury].add(rToTreasury);
+        _tOwned[treasury] = _tOwned[treasury].add(tToTreasury);
+
+        _rReferralReward = _rReferralReward.add(rToReferrals);
+        _tReferralReward = _tReferralReward.add(tToReferrals);
+
         _rTotal = _rTotal.sub(rToHolders).sub(rToBurn);
         _tTotal = _tTotal.sub(tToBurn);
         _tFeeTotal = _tFeeTotal.add(tFee);
@@ -341,6 +357,8 @@ contract GOLDX is Context, IGOLDX, Ownable, AccessControl, Pausable {
             rSupply = rSupply.sub(_rOwned[_excluded[i]]);
             tSupply = tSupply.sub(_tOwned[_excluded[i]]);
         }
+        rSupply = rSupply.sub(_rReferralReward);
+        tSupply = tSupply.sub(_tReferralReward);
         if (rSupply < _rTotal.div(_tTotal)) return (_rTotal, _tTotal);
         return (rSupply, tSupply);
     }
@@ -370,7 +388,7 @@ contract GOLDX is Context, IGOLDX, Ownable, AccessControl, Pausable {
         _unpause();
     }
 
-    function excludeAccount(address account) external whenNotPaused onlyOwner() {
+    function excludeAccount(address account) public whenNotPaused onlyOwner() {
         require(!_isExcluded[account], "Account is already excluded");
         if(_rOwned[account] > 0) {
             _tOwned[account] = tokenFromReflection(_rOwned[account]);
@@ -379,7 +397,7 @@ contract GOLDX is Context, IGOLDX, Ownable, AccessControl, Pausable {
         _excluded.push(account);
     }
 
-    function includeAccount(address account) external whenNotPaused onlyOwner() {
+    function includeAccount(address account) public whenNotPaused onlyOwner() {
         require(_isExcluded[account], "Account is already excluded");
         for (uint256 i = 0; i < _excluded.length; i++) {
             if (_excluded[i] == account) {
