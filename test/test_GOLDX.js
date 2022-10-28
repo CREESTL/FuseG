@@ -2,13 +2,15 @@ const { ethers } = require("hardhat");
 const { expect } = require("chai");
 
 const parseEther = ethers.utils.parseEther;
+const toBytes32 = ethers.utils.formatBytes32String;
+
 const FEE = 10; //10% of transaction amount
 const TOHOLDERS = 70; //70% of transaction fee
 const TOTREASURY = 10; //10% of transaction fee
 const TOBURN = 10; //10% of transaction fee
 const TOREFERRALS = 10; //10% of transaction fee
 
-describe('GOLDX Token', () => {
+describe("GOLDX Token", () => {
     beforeEach( async () => {
         [team, marketing, treasury, rewardVault, multiSigVault, ...users] = await ethers.getSigners();
         let GoldX = await ethers.getContractFactory("GOLDX");
@@ -21,9 +23,15 @@ describe('GOLDX Token', () => {
         await goldX.excludeAccount(marketing.address);
         await goldX.excludeAccount(team.address);
         
+        SUPERADMIN = await goldX.SUPERADMIN_ROLE();
+
         getBalances = async (silent) => {
             let balances = {};
-            let addresses = ['Team wallet', 'Marketing wallet', 'Treasury', 'Reward Vault', 'Multi-signature Vault', 'User1', 'User2', 'User3'];
+            let addresses = [
+                'Team wallet', 'Marketing wallet', 'Treasury',
+                'Reward Vault', 'Multi-signature Vault', 'User1',
+                'User2', 'User3', 'User4', 'User5'];
+
             balances.team = await goldX.balanceOf(team.address);
             balances.marketing = await goldX.balanceOf(marketing.address);
             balances.treasury = await goldX.balanceOf(treasury.address);
@@ -32,6 +40,8 @@ describe('GOLDX Token', () => {
             balances.user1 = await goldX.balanceOf(users[0].address);
             balances.user2 = await goldX.balanceOf(users[1].address);
             balances.user3 = await goldX.balanceOf(users[2].address);
+            balances.user4 = await goldX.balanceOf(users[3].address);
+            balances.user5 = await goldX.balanceOf(users[4].address);
             if(!silent) {
                 for(let i=0; i<addresses.length; i++) {
                     console.log(`${addresses[i]} balance: ${Object.values(balances)[i]/1e18} GOLDX`);
@@ -41,15 +51,15 @@ describe('GOLDX Token', () => {
         }
     });
 
-    describe('Base', () => {
-        it('Should have correct name, symbol and decimals', async() => {
+    describe("Base", () => {
+        it("Should have correct name, symbol and decimals", async() => {
             expect(await goldX.name()).to.equal("GOLDX");
             expect(await goldX.symbol()).to.equal("GLDX");
             expect(await goldX.decimals()).to.equal(18);
         });
     });
-    describe('Fees distribution', () => {
-        it('Should take fees for transaction and distribute it to holders, treasury, burn wallet and referrals', async() => {
+    describe("Transactions & Fees distribution", () => {
+        it("Should take fees for transaction and distribute it to holders, treasury, burn wallet and referrals", async() => {
             // transfer 10 GoldX with 10% fee
             // fee - 1 GoldX
             // to burn - 0.1 GoldX
@@ -69,21 +79,209 @@ describe('GOLDX Token', () => {
             console.log("\nTransferred 10 GoldX from team wallet to user1\n");
             let balancesAfter = await getBalances();
             let totalSupplyAfter = await goldX.totalSupply();
+          
             // result = 10 - 1 + 0.7
-            expect(balancesAfter.user1).to.be.equal(balancesBefore.user1.add(amountWithFees).add(feeAmount.mul(TOHOLDERS).div(100)));
+            let expectedHolderAmount = amountWithFees.add(feeAmount.mul(TOHOLDERS).div(100));
+            expect(balancesAfter.user1).to.be.equal(balancesBefore.user1.add(expectedHolderAmount));
             expect(balancesAfter.treasury).to.be.equal(feeAmount.mul(TOTREASURY).div(100));
             expect(refReward).to.be.equal(feeAmount.mul(TOREFERRALS).div(100));
+
             let burnedAmount = totalSupplyBefore.sub(totalSupplyAfter);
             let expectedBurnedAmount = feeAmount.mul(TOBURN).div(100);
             expect(burnedAmount).to.be.equal(expectedBurnedAmount);
-            let sum = Object.values(balancesAfter).map(el => el/1e18, 0).reduce((a, b) => a + b, 0);
-            sum = sum + burnedAmount/1e18 + refReward/1e18;
+          
             // all tokens in circulation should be 2.2B
-            expect(sum).to.be.equal(2200000000)
+            let sum = Object.values(balancesAfter).map(el => el*1, 0).reduce((a, b) => a + b, 0);
+            sum = (sum + burnedAmount*1 + refReward*1) / 1e18;
+            expect(sum).to.be.equal(2200000000);
+        });
+        it("Users that are in the whitelist don't pay fees", async() => {
+            let amount = parseEther("10");
+            let balancesBefore = await getBalances();
+
+            await goldX.addToWhitelist(team.address);
+            await goldX.transfer(users[0].address, amount);
+
+            console.log("\nTeam wallet now in the whitelist !");
+            console.log("Transferred 10 GoldX from team wallet to user1\n");
+            let balancesAfter = await getBalances();
+          
+            // result = 10, no fees taken
+            expect(balancesAfter.user1).to.be.equal(balancesBefore.user1.add(amount));
+        });
+        it("If user is in the blacklist, transaction is not executed", async() => {
+            let amount = parseEther("10");
+
+            await goldX.addToBlacklist(team.address);
+            await expect(goldX.transfer(users[0].address, amount))
+                .to.be.revertedWith("GOLDX: USER IS BLACKLISTED");
+        });
+        it("Owner can change fees amount", async() => {
+            let amount = parseEther("10");
+            let newFeeAmount = 5;
+            let feeAmount = amount.mul(newFeeAmount).div(100);
+            let amountWithFees = amount.sub(feeAmount);
+            await goldX.setFees(newFeeAmount);
+
+            let balancesBefore = await getBalances();
+            let totalSupplyBefore = await goldX.totalSupply();
+            await goldX.transfer(users[0].address, amount);
+
+            let refReward = await goldX._tReferralReward();
+
+            console.log("\nNew FEE AMOUNT is 5% !");
+            console.log("Transferred 10 GoldX from team wallet to user1\n");
+            let balancesAfter = await getBalances();
+            let totalSupplyAfter = await goldX.totalSupply();
+          
+            // result = 10 - 0.5 + 0.35
+            let expectedHolderAmount = amountWithFees.add(feeAmount.mul(TOHOLDERS).div(100));
+            expect(balancesAfter.user1).to.be.equal(balancesBefore.user1.add(expectedHolderAmount));
+            expect(balancesAfter.treasury).to.be.equal(feeAmount.mul(TOTREASURY).div(100));
+            expect(refReward).to.be.equal(feeAmount.mul(TOREFERRALS).div(100));
+
+            let burnedAmount = totalSupplyBefore.sub(totalSupplyAfter);
+            let expectedBurnedAmount = feeAmount.mul(TOBURN).div(100);
+            expect(burnedAmount).to.be.equal(expectedBurnedAmount);
+          
+            // all tokens in circulation should be 2.2B
+            let sum = Object.values(balancesAfter).map(el => el*1, 0).reduce((a, b) => a + b, 0);
+            sum = (sum + burnedAmount*1 + refReward*1) / 1e18;
+            expect(sum).to.be.equal(2200000000);
+        });
+        it("New fee amount must be in 0-15% range", async() => {
+            let newFeeAmount = 16;
+            await expect(goldX.setFees(newFeeAmount))
+                .to.be.revertedWith("GOLDX: 0% >= TRANSACTION FEE <= 15%");
+        });
+        it("Owner can change fee distributon", async() => {
+            let amount = parseEther("10");
+            let feeAmount = amount.mul(FEE).div(100);
+            let amountWithFees = amount.sub(feeAmount);
+            // setting new values for the fee distribution
+            let toHolders = 20;
+            let toTreasury = 50;
+            let toBurn = 15;
+            let toReferrals = 15;
+            await goldX.setFeeDistribution(toHolders, toTreasury, toBurn, toReferrals);
+
+            let balancesBefore = await getBalances();
+            let totalSupplyBefore = await goldX.totalSupply();
+            await goldX.transfer(users[0].address, amount);
+
+            let refReward = await goldX._tReferralReward();
+
+            console.log("\nNew FEE DISTRIBUTION 20% - to holders, 50% - to treasury, 15% - to burn, 15% - to referrals !");
+            console.log("Transferred 10 GoldX from team wallet to user1\n");
+            let balancesAfter = await getBalances();
+            let totalSupplyAfter = await goldX.totalSupply();
+          
+            // result = 10 - 1 + 0.2
+            let expectedHolderAmount = amountWithFees.add(feeAmount.mul(toHolders).div(100));
+            expect(balancesAfter.user1).to.be.equal(balancesBefore.user1.add(expectedHolderAmount));
+            expect(balancesAfter.treasury).to.be.equal(feeAmount.mul(toTreasury).div(100));
+            expect(refReward).to.be.equal(feeAmount.mul(toReferrals).div(100));
+
+            let burnedAmount = totalSupplyBefore.sub(totalSupplyAfter);
+            let expectedBurnedAmount = feeAmount.mul(toBurn).div(100);
+            expect(burnedAmount).to.be.equal(expectedBurnedAmount);
+          
+            // all tokens in circulation should be 2.2B
+            let sum = Object.values(balancesAfter).map(el => el*1, 0).reduce((a, b) => a + b, 0);
+            sum = (sum + burnedAmount*1 + refReward*1) / 1e18;
+            expect(sum).to.be.equal(2200000000);
+        });
+        it("Only owner can set fees", async() => {
+            let newFeeAmount = 16;
+            await expect(goldX.connect(users[0]).setFees(newFeeAmount))
+                .to.be.revertedWith("Ownable: caller is not the owner");
+        });
+        it("Only owner can set new fee distributions", async() => {
+            // setting new values for the fee distribution
+            let toHolders = 20;
+            let toTreasury = 50;
+            let toBurn = 15;
+            let toReferrals = 15;
+            await expect(goldX.connect(users[0]).setFeeDistribution(toHolders, toTreasury, toBurn, toReferrals))
+                .to.be.revertedWith("Ownable: caller is not the owner");
         });
     });
-    describe('Referral programm', () => {
-        it('Should distribute fees to all referrals if transaction was not initiated by a referral', async() => {
+    describe("Superadmins", () => {
+        it("Owner can assign and revoke superadmin rights", async() => {
+            await goldX.grantRole(SUPERADMIN, users[0].address);
+            let hasRole = await goldX.hasRole(SUPERADMIN, users[0].address);
+            expect(hasRole).to.be.equal(true);
+
+            await goldX.revokeRole(SUPERADMIN, users[0].address);
+            hasRole = await goldX.hasRole(SUPERADMIN, users[0].address);
+            expect(hasRole).to.be.equal(false);
+        });
+        it("Owner and superadmins can add/remove users to the whitelist", async() => {
+            await goldX.grantRole(SUPERADMIN, users[0].address);
+            await goldX.addToWhitelist(users[1].address);
+            await goldX.connect(users[0]).addToWhitelist(users[2].address);
+
+            expect(await goldX.whitelist(users[1].address)).to.be.equal(true);
+            expect(await goldX.whitelist(users[2].address)).to.be.equal(true);
+
+            await goldX.removeFromWhitelist(users[1].address);
+            await goldX.connect(users[0]).removeFromWhitelist(users[2].address);
+
+            expect(await goldX.whitelist(users[1].address)).to.be.equal(false);
+            expect(await goldX.whitelist(users[2].address)).to.be.equal(false);
+
+            await expect(goldX.connect(users[1]).addToWhitelist(users[2].address))
+                .to.be.revertedWith(`AccessControl: account ${users[1].address.toLowerCase()} is missing role ${SUPERADMIN}`);
+            await expect(goldX.connect(users[1]).removeFromWhitelist(users[2].address))
+                .to.be.revertedWith(`AccessControl: account ${users[1].address.toLowerCase()} is missing role ${SUPERADMIN}`);
+        });
+        it("Owner and superadmins can add/remove users to the blacklist", async() => {
+            await goldX.grantRole(SUPERADMIN, users[0].address);
+            await goldX.addToBlacklist(users[1].address);
+            await goldX.connect(users[0]).addToBlacklist(users[2].address);
+
+            expect(await goldX.blacklist(users[1].address)).to.be.equal(true);
+            expect(await goldX.blacklist(users[2].address)).to.be.equal(true);
+
+            await goldX.removeFromBlacklist(users[1].address);
+            await goldX.connect(users[0]).removeFromBlacklist(users[2].address);
+
+            expect(await goldX.blacklist(users[1].address)).to.be.equal(false);
+            expect(await goldX.blacklist(users[2].address)).to.be.equal(false);
+
+            await expect(goldX.connect(users[1]).addToBlacklist(users[2].address))
+                .to.be.revertedWith(`AccessControl: account ${users[1].address.toLowerCase()} is missing role ${SUPERADMIN}`);
+            await expect(goldX.connect(users[1]).removeFromBlacklist(users[2].address))
+                .to.be.revertedWith(`AccessControl: account ${users[1].address.toLowerCase()} is missing role ${SUPERADMIN}`);
+        });
+        it("Owner and superadmins can put the token on pause", async() => {
+            await goldX.grantRole(SUPERADMIN, users[0].address);
+            await goldX.pause();
+            expect(await goldX.paused()).to.be.equal(true);
+            await goldX.unpause();
+            expect(await goldX.paused()).to.be.equal(false);
+            await goldX.connect(users[0]).pause();
+            expect(await goldX.paused()).to.be.equal(true);
+
+            await expect(goldX.connect(users[1]).unpause())
+                .to.be.revertedWith(`AccessControl: account ${users[1].address.toLowerCase()} is missing role ${SUPERADMIN}`);
+          
+            await goldX.connect(users[0]).unpause();
+            expect(await goldX.paused()).to.be.equal(false);
+
+            await expect(goldX.connect(users[1]).pause())
+                .to.be.revertedWith(`AccessControl: account ${users[1].address.toLowerCase()} is missing role ${SUPERADMIN}`);
+        });
+        it("Transfers and other functions during pause are prohibited", async() => {
+            await goldX.pause();
+            await expect(goldX.addToWhitelist(users[0].address))
+                .to.be.revertedWith("Pausable: paused");
+            await expect(goldX.transfer(users[0].address, 100000000))
+                .to.be.revertedWith("Pausable: paused");
+        });
+    });
+    describe("Referral programm", () => {
+        it("Should distribute fees to all referrals if transaction was not initiated by a referral", async() => {
             let amount = parseEther("10");
             let feeAmount = amount.mul(FEE).div(100);
             let amountWithFees = amount.sub(feeAmount);
