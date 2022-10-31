@@ -2,6 +2,7 @@ const { ethers } = require("hardhat");
 const { expect } = require("chai");
 
 const parseEther = ethers.utils.parseEther;
+const formatEther = ethers.utils.formatEther;
 const toBytes32 = ethers.utils.formatBytes32String;
 
 const FEE = 10; //10% of transaction amount
@@ -281,6 +282,19 @@ describe("GOLDX Token", () => {
         });
     });
     describe("Referral programm", () => {
+        it("User can become a referrer", async() => {
+            await goldX.addReferrer(users[0].address);
+            let referrersList = await goldX.getReferrersList();
+            expect(referrersList).to.include(users[0].address);
+        });
+        it("User can change it's referrer", async() => {
+            await goldX.addReferrer(users[0].address);
+            await goldX.connect(users[1]).setReferrer(users[0].address);
+            let referralsList = await goldX.getReferralsList();
+            let referrer = await goldX.connect(users[1]).getMyReferrer();
+            expect(referralsList).to.include(users[1].address);
+            expect(referrer).to.include(users[0].address);
+        });
         it("Should distribute fees to all referrals if transaction was not initiated by a referral", async() => {
             let amount = parseEther("10");
             let feeAmount = amount.mul(FEE).div(100);
@@ -289,14 +303,104 @@ describe("GOLDX Token", () => {
             let balancesBefore = await getBalances();
             let totalSupplyBefore = await goldX.totalSupply();
             await goldX.addReferrer(users[1].address);
-            await goldX.connect(users[2]).bindReferrerToReferral(users[1].address);
+            await goldX.connect(users[2]).setReferrer(users[1].address);
             await goldX.transfer(users[0].address, amount);
 
             let refReward = await goldX._tReferralReward();
+            expect(refReward).to.be.equal(feeAmount.mul(TOREFERRALS).div(100));
 
-            console.log("\nTransferred 10 GoldX from team wallet to user1\n");
+            console.log("\nTransferred 10 GoldX from team wallet to user1");
+            console.log("User2 and User3 participate in a referral programm\n");
             let balancesAfter = await getBalances();
             let totalSupplyAfter = await goldX.totalSupply();
+            expect(balancesAfter.user2).to.be.equal(refReward.div(2));
+            expect(balancesAfter.user3).to.be.equal(refReward.div(2));
+        });
+        it("If referral is initiating transaction, he splits part of the fee with his referrer", async() => {
+            let amount = parseEther("10");
+            let feeAmount = amount.mul(FEE).div(100);
+            let refRewardJs = feeAmount.mul(TOREFERRALS).div(100);
+
+            let amountWithFees = amount.sub(feeAmount);
+            await goldX.addToWhitelist(team.address);
+            await goldX.transfer(users[4].address, amount);
+
+            let balancesBefore = await getBalances();
+            let totalSupplyBefore = await goldX.totalSupply();
+
+            await goldX.addReferrers([users[1].address, users[3].address]);
+            await goldX.connect(users[2]).setReferrer(users[1].address);
+            await goldX.connect(users[4]).setReferrer(users[3].address);
+
+            await goldX.connect(users[4]).transfer(users[0].address, amount);
+
+            let refReward = await goldX._tReferralReward();
+            expect(refReward).to.be.equal(0);
+
+            console.log("\nTransferred 10 GoldX from team wallet to user1");
+            console.log("User4 is the User5's referrer\n");
+            let balancesAfter = await getBalances();
+            let totalSupplyAfter = await goldX.totalSupply();
+            let burnedAmount = totalSupplyBefore.sub(totalSupplyAfter);
+            // all tokens in circulation should be 2.2B
+            let sum = Object.values(balancesAfter).map(el => el*1, 0).reduce((a, b) => a + b, 0);
+            sum = (sum + burnedAmount*1 + refReward*1) / 1e18;
+            expect(sum).to.be.within(2200000000 - 1, 2200000000 + 1);
+        });
+        it("New referrals don't get rewards for the past distributions", async() => {
+            let amount = parseEther("10");
+            let feeAmount = amount.mul(FEE).div(100);
+            let amountWithFees = amount.sub(feeAmount);
+
+            let balancesBefore = await getBalances();
+            let totalSupplyBefore = await goldX.totalSupply();
+            await goldX.addReferrer(users[1].address);
+            await goldX.connect(users[2]).setReferrer(users[1].address);
+            await goldX.transfer(users[0].address, amount);
+
+            let refReward = await goldX._tReferralReward();
+            expect(refReward).to.be.equal(feeAmount.mul(TOREFERRALS).div(100));
+
+            console.log("\nTransferred 10 GoldX from team wallet to user1");
+            console.log("User2 and User3 participate in a referral programm\n");
+            await getBalances();
+
+            console.log("\nTransferred another 10 GoldX from team wallet to user1");
+            console.log("User4 and User5 joined the referral programm\n");
+            await goldX.addReferrer(users[3].address);
+            await goldX.connect(users[4]).setReferrer(users[3].address);
+            await goldX.transfer(users[0].address, amount);
+            let balancesAfter = await getBalances();
+            expect(balancesAfter.user4).to.be.equal(refReward.div(4));
+            expect(balancesAfter.user5).to.be.equal(refReward.div(4));
+        });
+        it("Total supply is consistent", async() => {
+            let amount = parseEther("1000");
+            await goldX.addToWhitelist(team.address);
+            let totalSupplyBefore = await goldX.totalSupply();
+
+            await goldX.addReferrers([users[0].address, users[1].address]);
+            await goldX.connect(users[2]).setReferrer(users[0].address);
+            await goldX.connect(users[3]).setReferrer(users[0].address);
+            await goldX.connect(users[4]).setReferrer(users[1].address);
+
+            for(let i=0; i<5; i++) {
+                await goldX.transfer(users[i].address, amount);
+            }
+            await getBalances();
+
+            for(let i=0; i<5; i++) {
+                for(let j=0; j<5; j++) {
+                    if(i != j)
+                        await goldX.connect(users[i]).transfer(users[j].address, parseEther("100"));
+                }
+            }
+            let balancesAfter = await getBalances();
+            let totalSupplyAfter = await goldX.totalSupply();
+            let burnedAmount = totalSupplyBefore.sub(totalSupplyAfter);
+            let sum = Object.values(balancesAfter).map(el => el*1, 0).reduce((a, b) => a + b, 0);
+            sum = (sum + burnedAmount*1) / 1e18;
+            expect(sum).to.be.within(2200000000 - 1, 2200000000 + 1);
         });
     });
 });
