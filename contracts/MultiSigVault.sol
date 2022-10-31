@@ -75,6 +75,13 @@ contract MultiSigVault is IMultiSigVault, Ownable, Initializable {
         rewardVault.setNewRound(_phaseSupply, _phaseCount, _coeffs);
     }
 
+    /// @notice Owner can add multisigners
+    /// @param _newSigner new multi-signer address
+    function addMultiSigner(address _newSigner) public onlyOwner {
+        require(!signers.contains(_newSigner), "MV: SIGNER NOT UNIQUE");
+        signers.add(_newSigner);
+    }
+
     /// @notice Submits the proposal 
     /// @param _proposalType see Proposals enum 
     /// @param _to subject of the proposal 
