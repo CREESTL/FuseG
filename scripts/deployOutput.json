@@ -1,0 +1,86 @@
+{
+  "Goerli": {
+    "RewardVault": {
+      "address": "",
+      "verification": ""
+    },
+    "MultiSigVault": {
+      "address": "",
+      "verification": ""
+    },
+    "GOLDX": {
+      "address": "",
+      "verification": ""
+    }
+  },
+  "mumbai": {
+    "RewardVault": {
+      "address": "",
+      "verification": ""
+    },
+    "MultiSigVault": {
+      "address": "",
+      "verification": ""
+    },
+    "GOLDX": {
+      "address": "",
+      "verification": ""
+    }
+  },
+  "bsc_testnet": {
+    "RewardVault": {
+      "address": "0xDA3D6639C068ca20d7349bf96C28e484ef4E56CE",
+      "verification": "https://testnet.bscscan.com/address/0xDA3D6639C068ca20d7349bf96C28e484ef4E56CE#code"
+    },
+    "MultiSigVault": {
+      "address": "0xA7d6e7121Bdb6Dc0baf7A8C38bE01b612F8A8e3E",
+      "verification": "https://testnet.bscscan.com/address/0xA7d6e7121Bdb6Dc0baf7A8C38bE01b612F8A8e3E#code"
+    },
+    "GOLDX": {
+      "address": "0x18e169F7274950bF794E9bcCbCaD8A42196D0de0",
+      "verification": "https://testnet.bscscan.com/address/0x18e169F7274950bF794E9bcCbCaD8A42196D0de0#code"
+    }
+  },
+  "ethereum": {
+    "RewardVault": {
+      "address": "",
+      "verification": ""
+    },
+    "MultiSigVault": {
+      "address": "",
+      "verification": ""
+    },
+    "GOLDX": {
+      "address": "",
+      "verification": ""
+    }
+  },
+  "polygon": {
+    "RewardVault": {
+      "address": "",
+      "verification": ""
+    },
+    "MultiSigVault": {
+      "address": "",
+      "verification": ""
+    },
+    "GOLDX": {
+      "address": "",
+      "verification": ""
+    }
+  },
+  "bsc": {
+    "RewardVault": {
+      "address": "",
+      "verification": ""
+    },
+    "MultiSigVault": {
+      "address": "",
+      "verification": ""
+    },
+    "GOLDX": {
+      "address": "",
+      "verification": ""
+    }
+  }
+}
