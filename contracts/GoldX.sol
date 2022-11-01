@@ -102,10 +102,10 @@ contract GOLDX is Context, IGOLDX, Ownable, AccessControl, Pausable {
         _rOwned[_rewardVault] = uint256(101_110_100 * 1e18).mul(rate);
         _rOwned[_multiSigVault] = uint256(2_088_889_900 * 1e18).mul(rate);
 
-        emit Transfer(address(0), _teamWallet, 5_000_000);
-        emit Transfer(address(0), _marketing, 5_000_000);
-        emit Transfer(address(0), _rewardVault, 101_110_100);
-        emit Transfer(address(0), _multiSigVault, 2_088_889_900);
+        emit Transfer(address(0), _teamWallet, 5_000_000 * 1e18);
+        emit Transfer(address(0), _marketing, 5_000_000 * 1e18);
+        emit Transfer(address(0), _rewardVault, 101_110_100 * 1e18);
+        emit Transfer(address(0), _multiSigVault, 2_088_889_900 * 1e18);
 
         excludeAccount(_rewardVault);
         excludeAccount(_multiSigVault);
