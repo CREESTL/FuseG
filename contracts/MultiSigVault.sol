@@ -20,21 +20,28 @@ contract MultiSigVault is IMultiSigVault, Ownable, Initializable {
 
     Proposal[] public proposals;
 
+    /// @notice only multi-signer can call this function
     modifier onlySigner() {
         require(signers.contains(msg.sender), "MV: NOT A SIGNER");
         _;
     }
 
+    /// @notice checks if proposal exists inside proposals array
+    /// @param _proposalIndex proposal index inside proposals array
     modifier proposalExists(uint256 _proposalIndex) {
         require(_proposalIndex < proposals.length, "MV: PROPOSAL DOESN'T EXIST");
         _;
     }
 
+    /// @notice checks if proposal has been executed
+    /// @param _proposalIndex proposal index inside proposals array
     modifier notExecuted(uint256 _proposalIndex) {
         require(!proposals[_proposalIndex].executed, "MV: PROPOSAL ALREADY EXECUTED");
         _;
     }
 
+    /// @notice checks if proposal has been confirmed
+    /// @param _proposalIndex proposal index inside proposals array
     modifier notConfirmed(uint256 _proposalIndex) {
         require(!isConfirmed[_proposalIndex][msg.sender], "MV: PROPOSAL ALREADY CONFIRMED");
         _;
@@ -75,7 +82,7 @@ contract MultiSigVault is IMultiSigVault, Ownable, Initializable {
         rewardVault.setNewRound(_phaseSupply, _phaseCount, _coeffs);
     }
 
-    /// @notice Owner can add multisigners
+    /// @notice Owner can add manually add a multisigner
     /// @param _newSigner new multi-signer address
     function addMultiSigner(address _newSigner) public onlyOwner {
         require(!signers.contains(_newSigner), "MV: SIGNER NOT UNIQUE");

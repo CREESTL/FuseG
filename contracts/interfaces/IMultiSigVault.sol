@@ -4,7 +4,7 @@ pragma solidity ^0.8.0;
 
 interface IMultiSigVault {
 
-    /// @notice proposal types 0-tx, 1-add signer, 2-remove signer
+    /// @notice proposal types 0-tx, 1-add signer, 2-remove signer, 3-change GoldX owner
     enum Proposals {
         Transaction,
         AddSigner,
