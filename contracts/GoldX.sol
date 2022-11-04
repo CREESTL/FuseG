@@ -11,8 +11,6 @@ import "@openzeppelin/contracts/security/Pausable.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "./interfaces/IGoldX.sol";
 
-import "hardhat/console.sol";
-
 contract GOLDX is Context, IGOLDX, Ownable, AccessControl, Pausable {
     using SafeMath for uint256;
     using Address for address;
@@ -38,11 +36,14 @@ contract GOLDX is Context, IGOLDX, Ownable, AccessControl, Pausable {
     bytes32 public constant SUPERADMIN_ROLE = keccak256("SUPERADMIN_ROLE");
 
     /// BLACKLIST & WHITELIST
+    /// @notice checks if user is in the blacklist
     mapping (address => bool) public blacklist;
+    /// @notice checks if user is in the whitelist
     mapping (address => bool) public whitelist;
 
     /// FEES
     uint256 private constant PCT_RATE = 100;
+    /// @notice transaction fee
     uint256 public feeAmount;
     uint256 private feeToHolders; 
     uint256 private feeToTreasury;
@@ -57,7 +58,7 @@ contract GOLDX is Context, IGOLDX, Ownable, AccessControl, Pausable {
     address public multiSigVault;
 
     /// REFERRAL PROGRAM
-    // referral => referrer
+    /// @notice returns referrer's address for a given referral
     mapping (address => address) public referrer;
     mapping (address => uint256) private snapshot;
     mapping (address => uint256) private personalReward;
@@ -65,17 +66,24 @@ contract GOLDX is Context, IGOLDX, Ownable, AccessControl, Pausable {
     EnumerableSet.AddressSet referrals;
     uint256 private totalReferralReward;
     uint256 private _rReferralReward;
-    // referral rewards collected
+    /// @notice total referral reward collected
     uint256 public _tReferralReward;
     uint256 private uniqueUsersCount;
 
 
-
+    /// @notice checks if user is in the blacklist
+    /// @param account user's address
     modifier notInBlacklist(address account) {
         require(!blacklist[account], "GOLDX: USER IS BLACKLISTED");
         _;
     }
 
+    /// @notice constructor with FuseG platform addresses
+    /// @param _teamWallet team wallet address
+    /// @param _marketing marketing wallet address
+    /// @param _treasury treasury address
+    /// @param _rewardVault reward vault address
+    /// @param _multiSigVault multi-signature vault address
     constructor (
         address _teamWallet,
         address _marketing,
@@ -116,22 +124,28 @@ contract GOLDX is Context, IGOLDX, Ownable, AccessControl, Pausable {
         _grantRole(SUPERADMIN_ROLE, msg.sender);
     }
 
+    /// @notice returns name of the token
     function name() public view returns (string memory) {
         return _name;
     }
 
+    /// @notice returns symbol of the token
     function symbol() public view returns (string memory) {
         return _symbol;
     }
 
+    /// @notice returns decimals amount of the token
     function decimals() public view returns (uint8) {
         return _decimals;
     }
 
+    /// @notice returns totalSupply amount of the token
     function totalSupply() public view override returns (uint256) {
         return _tTotal;
     }
 
+    /// @notice returns user's balance
+    /// @param account  user's address
     function balanceOf(address account) public view override returns (uint256) {
         if (_isExcluded[account]) 
             return _tOwned[account];
@@ -142,48 +156,82 @@ contract GOLDX is Context, IGOLDX, Ownable, AccessControl, Pausable {
         return tokenFromReflection(_rOwned[account]);
     }
 
+    /// @notice transfers tokens to a given address
+    /// @param recipient recipient's address
+    /// @param amount amount of tokens to send
+    /// @return boolean value indicating whether the operation succeeded.
     function transfer(address recipient, uint256 amount) public override whenNotPaused returns (bool) {
         _transfer(_msgSender(), recipient, amount);
         return true;
     }
 
+    /// @notice returns the amount of tokens that spender allowed to spend on behalf of owner
+    /// @param owner owner of the tokens
+    /// @param spender spender's address 
     function allowance(address owner, address spender) public view override returns (uint256) {
         return _allowances[owner][spender];
     }
 
+    /// @notice allows spender to spend tokens on behalf of the transaction sender via transferFrom
+    /// @param spender spender's address
+    /// @param amount amount of tokens that spender is allowed to spent 
+    /// @return boolean value indicating whether the operation succeeded.
     function approve(address spender, uint256 amount) public override whenNotPaused returns (bool) {
         _approve(_msgSender(), spender, amount);
         return true;
     }
 
+    /// @notice transfers tokens to a given address on behalf of the owner
+    /// @param sender sender's address
+    /// @param recipient recipient's address
+    /// @param amount amount of tokens
+    /// @return boolean value indicating whether the operation succeeded.
     function transferFrom(address sender, address recipient, uint256 amount) public override whenNotPaused returns (bool) {
         _transfer(sender, recipient, amount);
         _approve(sender, _msgSender(), _allowances[sender][_msgSender()].sub(amount, "ERC20: transfer amount exceeds allowance"));
         return true;
     }
 
+    /// @notice increase amount of tokens to spend on behalf of an owner
+    /// @param spender sender's address
+    /// @param addedValue amount of tokens 
+    /// @return boolean value indicating whether the operation succeeded.
     function increaseAllowance(address spender, uint256 addedValue) public virtual whenNotPaused returns (bool) {
         _approve(_msgSender(), spender, _allowances[_msgSender()][spender].add(addedValue));
         return true;
     }
 
+    /// @notice decrease amount of tokens to spend on behalf of an owner
+    /// @param spender sender's address
+    /// @param subtractedValue amount of tokens 
+    /// @return boolean value indicating whether the operation succeeded.
     function decreaseAllowance(address spender, uint256 subtractedValue) public virtual whenNotPaused returns (bool) {
         _approve(_msgSender(), spender, _allowances[_msgSender()][spender].sub(subtractedValue, "ERC20: decreased allowance below zero"));
         return true;
     }
 
+    /// @notice checks if user is excluded from fees reflection (toHolders %)
+    /// @param account user's address
     function isExcluded(address account) public view returns (bool) {
         return _isExcluded[account];
     }
 
+    /// @notice set transaction fees amount
+    /// @param _feeAmount transaction fee amount
     function setFees(uint256 _feeAmount) public whenNotPaused onlyOwner{
         require(_feeAmount >= 0 && _feeAmount <= 15, "GOLDX: 0% >= TRANSACTION FEE <= 15%");
         feeAmount = _feeAmount;
     }
 
+    /// @notice set fee distribution
+    /// @param _toHolders fee share to token holders
+    /// @param _toTreasury fee share to treasury
+    /// @param _toBurn fee share to burn
+    /// @param _toReferrals fee share to referrals
     function setFeeDistribution(uint256 _toHolders, uint256 _toTreasury, uint256 _toBurn, uint256 _toReferrals) public whenNotPaused onlyOwner{
         require(feeAmount !=0, "GOLDX: TRANSACTION FEE IS ZERO");
         uint256 sum = _toHolders + _toTreasury + _toBurn + _toReferrals;
+        //TODO REFACTOR AND TEST SUM CHECK
         require(sum.div(10) == feeAmount, "GOLDX: WRONG DISTRIBUTION, SUM MUST EQUAL FEE");
         feeToHolders = _toHolders;
         feeToTreasury = _toTreasury;
@@ -191,10 +239,13 @@ contract GOLDX is Context, IGOLDX, Ownable, AccessControl, Pausable {
         feeToReferrals = _toReferrals;
     }
 
+    /// @notice returns amount of collected fees
     function totalFees() public view returns (uint256) {
         return _tFeeTotal;
     }
 
+    /// @notice reflects/distributes tAmount between non-excluded holders
+    /// @param tAmount amount of tokens to distribute
     function reflect(uint256 tAmount) public whenNotPaused {
         address sender = _msgSender();
         require(!_isExcluded[sender], "Excluded addresses cannot call this function");
@@ -204,6 +255,9 @@ contract GOLDX is Context, IGOLDX, Ownable, AccessControl, Pausable {
         _tFeeTotal = _tFeeTotal.add(tAmount);
     }
 
+    /// @notice transforms token amount from t-space to r-space
+    /// @param tAmount amount of tokens in r-space
+    /// @param deductTransferFee true if fee should be deducted
     function reflectionFromToken(uint256 tAmount, bool deductTransferFee) public view returns(uint256) {
         require(tAmount <= _tTotal, "Amount must be less than supply");
         if (!deductTransferFee) {
@@ -215,6 +269,8 @@ contract GOLDX is Context, IGOLDX, Ownable, AccessControl, Pausable {
         }
     }
 
+    /// @notice transforms token amount from r-space to t-space
+    /// @param rAmount token amount in r-space
     function tokenFromReflection(uint256 rAmount) public view returns(uint256) {
         require(rAmount <= _rTotal, "Amount must be less than total reflections");
         uint256 currentRate =  _getRate();
@@ -369,30 +425,42 @@ contract GOLDX is Context, IGOLDX, Ownable, AccessControl, Pausable {
     }
     
     /// ADMIN FUNCTIONS
+    /// @notice add user to the whitelist
+    /// @param account user's address
     function addToWhitelist(address account) public whenNotPaused onlyRole(SUPERADMIN_ROLE){
         whitelist[account] = true;
     }
 
+    /// @notice add user to the blacklist
+    /// @param account user's address
     function addToBlacklist(address account) public whenNotPaused onlyRole(SUPERADMIN_ROLE){
         blacklist[account] = true;
     }
 
+    /// @notice remove user from the whitelist
+    /// @param account user's address
     function removeFromWhitelist(address account) public whenNotPaused onlyRole(SUPERADMIN_ROLE){
         whitelist[account] = false;
     }
 
+    /// @notice remove user from the blacklist
+    /// @param account user's address
     function removeFromBlacklist(address account) public whenNotPaused onlyRole(SUPERADMIN_ROLE){
         blacklist[account] = false;
     }
 
+    /// @notice pause the contract
     function pause() public onlyRole(SUPERADMIN_ROLE){
         _pause();
     }
 
+    /// @notice unpause the contract
     function unpause() public onlyRole(SUPERADMIN_ROLE){
         _unpause();
     }
 
+    /// @notice remove user from fees (toHolders %) distribution
+    /// @param account user's address
     function excludeAccount(address account) public whenNotPaused onlyOwner() {
         require(!_isExcluded[account], "Account is already excluded");
         if(_rOwned[account] > 0) {
@@ -402,6 +470,8 @@ contract GOLDX is Context, IGOLDX, Ownable, AccessControl, Pausable {
         _excluded.push(account);
     }
 
+    /// @notice add user to fees (toHolders %) distribution
+    /// @param account user's address
     function includeAccount(address account) public whenNotPaused onlyOwner() {
         require(_isExcluded[account], "Account is already excluded");
         for (uint256 i = 0; i < _excluded.length; i++) {
@@ -415,6 +485,8 @@ contract GOLDX is Context, IGOLDX, Ownable, AccessControl, Pausable {
         }
     }
 
+    /// @notice multi-signature vault can change owner of the token if enough multisigners have voted
+    /// @param newOwner new owner of the token contract
     function changeOwner(address newOwner) external whenNotPaused {
         require(msg.sender == multiSigVault, "GOLDX: ONLY MULTISIGNER VAULT CONTRACT CAN CHANGE THE OWNER");
         address oldOwner = owner();
@@ -427,20 +499,27 @@ contract GOLDX is Context, IGOLDX, Ownable, AccessControl, Pausable {
     }
 
     /// REFERRAL PROGRAMM FUNCTIONS
+    /// @notice add a referrer
+    /// @param account referrer's address
     function addReferrer(address account) public whenNotPaused onlyRole(SUPERADMIN_ROLE) {
         require(!referrers.contains(account), "GOLDX: REFERRER ALREADY EXISTS");
         snapshot[account] = getReferralReward();
         totalReferralReward = totalReferralReward.add(getReferralReward());
         referrers.add(account);
-        uniqueUsersCount ++;
+        if(!referrals.contains(msg.sender))
+            uniqueUsersCount ++;
     }
 
+    /// @notice add multiple referrers
+    /// @param accounts array of referrers
     function addReferrers(address[] memory accounts) public whenNotPaused onlyRole(SUPERADMIN_ROLE) {
         for(uint256 i = 0; i < accounts.length; i++) {
             addReferrer(accounts[i]);
         }
     }
 
+    /// @notice binds referrers to a referral address
+    /// @param _referrer referrer's address
     function setReferrer(address _referrer) public whenNotPaused {
         require(referrers.contains(_referrer), "GOLDX: REFERRER DOES NOT EXIST");
         referrer[msg.sender] = _referrer;
@@ -449,18 +528,21 @@ contract GOLDX is Context, IGOLDX, Ownable, AccessControl, Pausable {
             totalReferralReward = totalReferralReward.add(getReferralReward());
             referrals.add(msg.sender);
         }
-        if(msg.sender != _referrer)
+        if(!referrers.contains(msg.sender))
             uniqueUsersCount ++;
     }
 
+    /// @notice returns referrer's addres of the msg.sender
     function getMyReferrer() public view returns(address) {
         return referrer[msg.sender];
     }
 
+    /// @notice returns list of referrer
     function getReferrersList() public view returns(address[] memory) {
         return referrers.values();
     }
 
+    /// @notice returns list of referrals
     function getReferralsList() public view returns(address[] memory) {
         return referrals.values();
     }
