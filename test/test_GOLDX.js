@@ -5,6 +5,11 @@ const parseEther = ethers.utils.parseEther;
 const formatEther = ethers.utils.formatEther;
 const toBytes32 = ethers.utils.formatBytes32String;
 
+function increaseTime(time) {
+  ethers.provider.send("evm_increaseTime", [ time ]);
+  ethers.provider.send("evm_mine");
+}
+
 const FEE = 10; //10% of transaction amount
 const TOHOLDERS = 70; //70% of transaction fee
 const TOTREASURY = 10; //10% of transaction fee
@@ -17,8 +22,6 @@ describe("GOLDX Token", () => {
         let GoldX = await ethers.getContractFactory("GOLDX");
         goldX = await GoldX.deploy(team.address, marketing.address, treasury.address, rewardVault.address, multiSigVault.address);
         await goldX.deployed();
-        await goldX.setFees(FEE);
-        await goldX.setFeeDistribution(TOHOLDERS, TOTREASURY, TOBURN, TOREFERRALS);
 
         await goldX.excludeAccount(treasury.address);
         await goldX.excludeAccount(marketing.address);
@@ -75,7 +78,7 @@ describe("GOLDX Token", () => {
             let totalSupplyBefore = await goldX.totalSupply();
             await goldX.transfer(users[0].address, amount);
 
-            let refReward = await goldX._tReferralReward();
+            let refReward = await goldX.getReferralReward();
 
             console.log("\nTransferred 10 GoldX from team wallet to user1\n");
             let balancesAfter = await getBalances();
@@ -128,7 +131,7 @@ describe("GOLDX Token", () => {
             let totalSupplyBefore = await goldX.totalSupply();
             await goldX.transfer(users[0].address, amount);
 
-            let refReward = await goldX._tReferralReward();
+            let refReward = await goldX.getReferralReward();
 
             console.log("\nNew FEE AMOUNT is 5% !");
             console.log("Transferred 10 GoldX from team wallet to user1\n");
@@ -170,7 +173,7 @@ describe("GOLDX Token", () => {
             let totalSupplyBefore = await goldX.totalSupply();
             await goldX.transfer(users[0].address, amount);
 
-            let refReward = await goldX._tReferralReward();
+            let refReward = await goldX.getReferralReward();
 
             console.log("\nNew FEE DISTRIBUTION 20% - to holders, 50% - to treasury, 15% - to burn, 15% - to referrals !");
             console.log("Transferred 10 GoldX from team wallet to user1\n");
@@ -281,7 +284,7 @@ describe("GOLDX Token", () => {
                 .to.be.revertedWith("Pausable: paused");
         });
     });
-    describe("Referral programm", () => {
+    describe("Referral program", () => {
         it("User can become a referrer", async() => {
             await goldX.addReferrer(users[0].address);
             let referrersList = await goldX.getReferrersList();
@@ -295,6 +298,23 @@ describe("GOLDX Token", () => {
             expect(referralsList).to.include(users[1].address);
             expect(referrer).to.include(users[0].address);
         });
+        it("User should wait for the cooldown to change his referrer again", async() => {
+            await goldX.addReferrer(users[0].address);
+            await goldX.addReferrer(users[2].address);
+            await goldX.connect(users[1]).setReferrer(users[0].address);
+            let referralsList = await goldX.getReferralsList();
+            let referrer = await goldX.connect(users[1]).getMyReferrer();
+            expect(referralsList).to.include(users[1].address);
+            expect(referrer).to.be.equal(users[0].address);
+
+            await expect(goldX.connect(users[1]).setReferrer(users[2].address))
+                .to.be.revertedWith("GOLDX: COOLDOWN IN PROGRESS");
+            increaseTime(90*24*60*60);
+            await goldX.connect(users[1]).setReferrer(users[2].address);
+            referrer = await goldX.connect(users[1]).getMyReferrer();
+            expect(referrer).to.be.equal(users[2].address);
+            
+        });
         it("Should distribute fees to all referrals if transaction was not initiated by a referral", async() => {
             let amount = parseEther("10");
             let feeAmount = amount.mul(FEE).div(100);
@@ -306,11 +326,11 @@ describe("GOLDX Token", () => {
             await goldX.connect(users[2]).setReferrer(users[1].address);
             await goldX.transfer(users[0].address, amount);
 
-            let refReward = await goldX._tReferralReward();
+            let refReward = await goldX.getReferralReward();
             expect(refReward).to.be.equal(feeAmount.mul(TOREFERRALS).div(100));
 
             console.log("\nTransferred 10 GoldX from team wallet to user1");
-            console.log("User2 and User3 participate in a referral programm\n");
+            console.log("User2 and User3 participate in a referral program\n");
             let balancesAfter = await getBalances();
             let totalSupplyAfter = await goldX.totalSupply();
             expect(balancesAfter.user2).to.be.equal(refReward.div(2));
@@ -334,9 +354,7 @@ describe("GOLDX Token", () => {
 
             await goldX.connect(users[4]).transfer(users[0].address, amount);
 
-            let refReward = await goldX._tReferralReward();
-            expect(refReward).to.be.equal(0);
-
+            let refReward = await goldX.getReferralReward();
             console.log("\nTransferred 10 GoldX from team wallet to user1");
             console.log("User4 is the User5's referrer\n");
             let balancesAfter = await getBalances();
@@ -358,15 +376,15 @@ describe("GOLDX Token", () => {
             await goldX.connect(users[2]).setReferrer(users[1].address);
             await goldX.transfer(users[0].address, amount);
 
-            let refReward = await goldX._tReferralReward();
+            let refReward = await goldX.getReferralReward();
             expect(refReward).to.be.equal(feeAmount.mul(TOREFERRALS).div(100));
 
             console.log("\nTransferred 10 GoldX from team wallet to user1");
-            console.log("User2 and User3 participate in a referral programm\n");
+            console.log("User2 and User3 participate in a referral program\n");
             await getBalances();
 
             console.log("\nTransferred another 10 GoldX from team wallet to user1");
-            console.log("User4 and User5 joined the referral programm\n");
+            console.log("User4 and User5 joined the referral program\n");
             await goldX.addReferrer(users[3].address);
             await goldX.connect(users[4]).setReferrer(users[3].address);
             await goldX.transfer(users[0].address, amount);

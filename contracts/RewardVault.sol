@@ -80,7 +80,9 @@ contract RewardVault is IRewardVault, Ownable, AccessControl, Initializable{
         require(msg.sender == fuseG, "RV: ONLY FUSEG CONTRACT CAN CALL");
         (uint8 phase, uint256 remainingPhaseSupply) = getMiningPhase(); 
         uint256 amountToMine = calcAmountToMine(phase, remainingPhaseSupply, fuseGAmount);
-        goldX.transfer(sender, amountToMine);
+        /// check if tx succeeded
+        if(!goldX.transfer(sender, amountToMine)) return;
+        
         minedAmount += amountToMine;
         emit Mine(sender, amountToMine);
         if(minedAmount == roundSupply){
@@ -125,5 +127,18 @@ contract RewardVault is IRewardVault, Ownable, AccessControl, Initializable{
     /// @notice returns GOLDX address
     function getGoldX() public view returns(address) {
         return address(goldX);
+    }
+
+    /// @notice multi-signature vault can change owner of the reward vault if enough multisigners have voted
+    /// @param newOwner new owner of the token contract
+    function changeOwner(address newOwner) external {
+        require(msg.sender == multiSigVault, "GOLDX: ONLY MULTISIGNER VAULT CONTRACT CAN CHANGE THE OWNER");
+        address oldOwner = owner();
+        _transferOwnership(newOwner);
+
+        _revokeRole(DEFAULT_ADMIN_ROLE, oldOwner);
+        _revokeRole(SUPPLY_ROLE, oldOwner);
+        _grantRole(DEFAULT_ADMIN_ROLE, newOwner);
+        _grantRole(SUPPLY_ROLE, newOwner);
     }
 }

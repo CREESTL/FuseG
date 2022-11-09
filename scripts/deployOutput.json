@@ -29,16 +29,16 @@
   },
   "bsc_testnet": {
     "RewardVault": {
-      "address": "0xDA3D6639C068ca20d7349bf96C28e484ef4E56CE",
-      "verification": "https://testnet.bscscan.com/address/0xDA3D6639C068ca20d7349bf96C28e484ef4E56CE#code"
+      "address": "0x6d565db17306A8E2c59B7cE7C230505001E9e65f",
+      "verification": "https://testnet.bscscan.com/address/0x6d565db17306A8E2c59B7cE7C230505001E9e65f#code"
     },
     "MultiSigVault": {
-      "address": "0xA7d6e7121Bdb6Dc0baf7A8C38bE01b612F8A8e3E",
-      "verification": "https://testnet.bscscan.com/address/0xA7d6e7121Bdb6Dc0baf7A8C38bE01b612F8A8e3E#code"
+      "address": "0x07d36014329ea1daE14a204e594603e1Fa291372",
+      "verification": "https://testnet.bscscan.com/address/0x07d36014329ea1daE14a204e594603e1Fa291372#code"
     },
     "GOLDX": {
-      "address": "0x18e169F7274950bF794E9bcCbCaD8A42196D0de0",
-      "verification": "https://testnet.bscscan.com/address/0x18e169F7274950bF794E9bcCbCaD8A42196D0de0#code"
+      "address": "0x165011d870544f93a949CBE6a2935722a1dD1c8E",
+      "verification": "https://testnet.bscscan.com/address/0x165011d870544f93a949CBE6a2935722a1dD1c8E#code"
     }
   },
   "ethereum": {

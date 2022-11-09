@@ -614,6 +614,12 @@ Multi-signature vault can change owner of the token if enough multisigners have 
 | newOwner | address | new owner of the token contract |
 ## Referral Program Functions 
 
+### cooldown
+```solidity
+uint256 cooldown
+```
+Time value in seconds after which user can change his referrer again. Default value 90 days.
+
 ### referrer
 
 ```solidity
@@ -663,13 +669,32 @@ function setReferrer(address _referrer) public
 ```
 > Cannot be called if the contract is paused
 
-User can call this fuction to become a referral and bind his address to the referrer of his choice. Whenever he makes a transaction he splits a referral share of the fee with his referrer. Can receive referral share.
+>Time between referrer changes can be no less than a cooldown value (90 days by default)
+
+User can call this function to become a referral and bind his address to the referrer of his choice. Whenever he makes a transaction he splits a referral share of the fee with his referrer. Can receive referral share.
 
 #### Parameters
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | _referrer | address | referrer's address |
+
+### setReferralCooldown
+
+```solidity
+function setReferralCooldown(uint256 _cooldown) public
+```
+> Cannot be called if the contract is paused
+
+>Only owner can call this function
+
+Owner can set a cooldown which restricts a referral from changing his referrer if a '_cooldown' amount of seconds hasn't passed.
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _cooldown | uint256 | cooldown, secs |
 
 ### getMyReferrer
 
@@ -831,6 +856,22 @@ Owner can manually add a multisigner.
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | _newSigner | address | new multi-signer address |
+
+### removeMultiSigner
+
+```solidity
+function removeMultiSigner(address _signer) public
+```
+
+> Only owner can call 
+
+Owner can manually remove a multisigner.
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _signer | address | multi-signer address |
 
 ### submitProposal
 

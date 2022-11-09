@@ -18,5 +18,6 @@ interface IRewardVault {
 
     function mineGoldX(address sender, uint256 fuseGAmount) external;
     function setNewRound(uint256 _phaseSupply, uint8 _phaseCount, uint256[] memory _coeffs) external;
+    function changeOwner(address newOwner) external;
 }
 
