@@ -390,6 +390,20 @@ function totalFees() public view returns (uint256)
 
 Returns total amount of fees paid by users.
 
+### getFeeDistribution
+```solidity
+function getFeeDistribution() public view returns (uint256)
+```
+#### Return Value
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _toHolders | uint256 | fee share to token holders %|
+| _toTreasury | uint256 | fee share to treasury %|
+| _toBurn | uint256 | fee share to burn %|
+| _toReferrals | uint256 | fee share to referrals %|
+
+Returns shares of fees distributed by the contract.
+
 ## Admin Functions
 
 ### SUPERADMIN_ROLE
@@ -605,13 +619,14 @@ function changeOwner(address newOwner) external
 
 > Only multi-signature vault can call
  
-Multi-signature vault can change owner of the token if enough multisigners have voted for this proposal.
+Multi-signature vault can change owner of the token and both vaults if enough multisigners have voted for this proposal.
 
 #### Parameters
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | newOwner | address | new owner of the token contract |
+
 ## Referral Program Functions 
 
 ### cooldown
@@ -885,7 +900,7 @@ Submits a proposal. There are 4 types of proposals
 - 0 - transfer {_amount} of GoldX tokens to {_to} address
 - 1 - add new multsigner with {_to} address
 - 2 - remove multisigner with {_to} address
-- 3 - change owner of GoldX token to {_to} address
+- 3 - change the owner of GoldX token and both vaults to {_to} address
 In every type of proposal besides type 0 argument {_amount} can be set to it's default value 0.
 
 #### Parameters
@@ -1056,7 +1071,7 @@ Amount of GoldX tokens mined by the users.
 mapping(uint8 => uint256) coeffTable
 ```
 
-Returns mining coefficient for a give phase (0, 1, 2...)
+Returns mining coefficient for a given phase (0, 1, 2...)
 ### currentRound
 
 ```solidity
@@ -1160,7 +1175,76 @@ Returns GOLDX address
 
 # IGoldX.sol
 
+## Events
+### SetFees
 
+```solidity
+event SetFees(uint256 newFeeAmount)
+```
+
+Emitted when owner sets a new transaction fee.
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| newFeeAmount| uint256 | transaction fee|
+
+### AddToWhitelist
+
+```solidity
+event AddToWhitelist(address account)
+```
+
+Emitted when new user is added to the whitelist.
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| account| uint256 | user's address|
+
+### AddToBlacklist
+
+```solidity
+event AddToBlacklist(address account)
+```
+
+Emitted when new user is added to the blacklist.
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| account| uint256 | user's address|
+
+### RemoveFromWhitelist
+
+```solidity
+event RemoveFromWhitelist(address account)
+```
+
+Emitted when new user is removed from the whitelist.
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| account| uint256 | user's address|
+
+### RemoveFromBlacklist
+
+```solidity
+event RemoveFromBlacklist(address account)
+```
+
+Emitted when new user is removed from the blacklist.
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| account| uint256 | user's address|
 
 # IMultiSigVault.sol
 
@@ -1178,7 +1262,7 @@ Proposal types enum
 0 - transfer
 1 - add multisigner
 2 - remove multisigner
-3 - change GoldX owner
+3 - change the owner of GoldX and both vaults
 
 ### Proposal
 
