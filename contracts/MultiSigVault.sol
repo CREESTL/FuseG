@@ -82,11 +82,18 @@ contract MultiSigVault is IMultiSigVault, Ownable, Initializable {
         rewardVault.setNewRound(_phaseSupply, _phaseCount, _coeffs);
     }
 
-    /// @notice Owner can add manually add a multisigner
+    /// @notice Owner can manually add a multisigner
     /// @param _newSigner new multi-signer address
     function addMultiSigner(address _newSigner) public onlyOwner {
         require(!signers.contains(_newSigner), "MV: SIGNER NOT UNIQUE");
         signers.add(_newSigner);
+    }
+
+    /// @notice Owner can manually remove a multisigner
+    /// @param _signer new multi-signer address
+    function removeMultiSigner(address _signer) public onlyOwner {
+        require(signers.contains(_signer), "MV: SIGNER DOESN'T EXIST");
+        signers.remove(_signer);
     }
 
     /// @notice Submits the proposal 
@@ -138,22 +145,30 @@ contract MultiSigVault is IMultiSigVault, Ownable, Initializable {
         notExecuted(_proposalIndex)
     {
         Proposal storage proposal = proposals[_proposalIndex];
+        //Round to the nearest number
+        uint256 halfOfAllSigners = signers.length() / 2;
+        uint256 numToConfirm = halfOfAllSigners + (halfOfAllSigners % 2);
 
         require(
-            proposal.numConfirmations >= signers.length() / 2,
+            proposal.numConfirmations >= numToConfirm,
             "MV: NOT ENOUGH CONFIRMATIONS"
         );
 
         proposal.executed = true;
         if (proposal.proposalType == Proposals.Transaction)
-            goldX.transfer(proposal.to, proposal.amount);
+            require(
+                goldX.transfer(proposal.to, proposal.amount),
+                "MV: GOLDX TRANSFER FAILED"
+            );
         if (proposal.proposalType == Proposals.AddSigner)
             signers.add(proposal.to);
         if (proposal.proposalType == Proposals.RemoveSigner)
             signers.remove(proposal.to);
-        if (proposal.proposalType == Proposals.ChangeOwner)
+        if (proposal.proposalType == Proposals.ChangeOwner) {
+            _changeOwner(proposal.to);
+            rewardVault.changeOwner(proposal.to);
             goldX.changeOwner(proposal.to);
-
+        }
         emit ExecuteProposal(msg.sender, _proposalIndex);
     }
 
@@ -217,5 +232,11 @@ contract MultiSigVault is IMultiSigVault, Ownable, Initializable {
     /// @notice returns GOLDX address
     function getGoldX() public view returns(address) {
         return address(goldX);
+    }
+
+    /// @notice multi-signature vault can change it's owner if enough multisigners have voted
+    /// @param newOwner new owner of the token contract
+    function _changeOwner(address newOwner) private {
+        _transferOwnership(newOwner);
     }
 }

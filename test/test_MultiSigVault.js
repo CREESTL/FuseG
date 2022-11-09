@@ -115,6 +115,22 @@ describe("Multi-signature vault", () => {
             signers = await multiSigVault.getSigners();
             expect(signers).to.not.include(bob.address);
         });
+        it("Signer can execute changeOwner proposal if >50% voted for it", async() => {
+            await multiSigVault.connect(alice).submitProposal(3, bob.address, 0);
+            await multiSigVault.connect(alice).confirmProposal(0);
+            await multiSigVault.connect(bob).confirmProposal(0);
+
+            let {numConfirmations} = await multiSigVault.getProposal(0);
+            expect(numConfirmations).to.be.equal(2);
+            await multiSigVault.connect(alice).executeProposal(0);
+            
+            let MVOwner = await multiSigVault.owner();
+            let RVOwner = await rewardVault.owner();
+            let GOLDXOwner = await goldX.owner();
+            expect(MVOwner).to.be.equal(bob.address);
+            expect(RVOwner).to.be.equal(bob.address);
+            expect(GOLDXOwner).to.be.equal(bob.address);
+        });
         it("Only signer can submit a proposal", async() => {
             let amount = parseEther("10000");
             await expect(multiSigVault.submitProposal(0, marketing.address, amount))

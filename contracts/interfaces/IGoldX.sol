@@ -21,6 +21,31 @@ interface IGOLDX {
     event Approval(address indexed owner, address indexed spender, uint256 value);
 
     /**
+     * @dev Emitted when owner calls {setFees} function with 'newFeeAmount' value
+     */
+    event SetFees(uint256 newFeeAmount);
+
+    /**
+     * @dev Emitted when owner or superadmin adds a new user to the whitelist
+     */
+    event AddToWhitelist(address account);
+
+    /**
+     * @dev Emitted when owner or superadmin removes a user from the whitelist
+     */
+    event RemoveFromWhitelist(address account);
+
+    /**
+     * @dev Emitted when owner or superadmin adds a new user to the blacklist
+     */
+    event AddToBlacklist(address account);
+
+    /**
+     * @dev Emitted when owner or superadmin removes a user from the blacklist
+     */
+    event RemoveFromBlacklist(address account);
+
+    /**
      * @dev Returns the amount of tokens in existence.
      */
     function totalSupply() external view returns (uint256);

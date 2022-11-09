@@ -64,11 +64,14 @@ contract GOLDX is Context, IGOLDX, Ownable, AccessControl, Pausable {
     mapping (address => uint256) private personalReward;
     EnumerableSet.AddressSet referrers;
     EnumerableSet.AddressSet referrals;
-    uint256 private totalReferralReward;
+    uint256 private compositeReferralReward;
     uint256 private _rReferralReward;
     /// @notice total referral reward collected
-    uint256 public _tReferralReward;
+    uint256 private _tReferralReward;
     uint256 private uniqueUsersCount;
+
+    uint256 public cooldown;
+    mapping (address => uint256) private timestamp;
 
 
     /// @notice checks if user is in the blacklist
@@ -122,6 +125,12 @@ contract GOLDX is Context, IGOLDX, Ownable, AccessControl, Pausable {
 
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _grantRole(SUPERADMIN_ROLE, msg.sender);
+
+        //set default fees 10%, 7% - to holders, 1% - to treasury, 1% - to burn, 1% - to referral program
+        setFees(10);
+        setFeeDistribution(70, 10, 10, 10);
+        //default referral cooldown 90 days
+        cooldown = 90 days;
     }
 
     /// @notice returns name of the token
@@ -150,7 +159,7 @@ contract GOLDX is Context, IGOLDX, Ownable, AccessControl, Pausable {
         if (_isExcluded[account]) 
             return _tOwned[account];
         if (referrers.contains(account) || referrals.contains(account)) {
-            uint256 totalReward = getReferralReward() - snapshot[account];
+            uint256 totalReward = getCompositeReferralReward() - snapshot[account];
             return tokenFromReflection(_rOwned[account]) + totalReward + personalReward[account];
         }
         return tokenFromReflection(_rOwned[account]);
@@ -219,8 +228,9 @@ contract GOLDX is Context, IGOLDX, Ownable, AccessControl, Pausable {
     /// @notice set transaction fees amount
     /// @param _feeAmount transaction fee amount
     function setFees(uint256 _feeAmount) public whenNotPaused onlyOwner{
-        require(_feeAmount >= 0 && _feeAmount <= 15, "GOLDX: 0% >= TRANSACTION FEE <= 15%");
+        require(_feeAmount <= 15, "GOLDX: 0% >= TRANSACTION FEE <= 15%");
         feeAmount = _feeAmount;
+        emit SetFees(_feeAmount);
     }
 
     /// @notice set fee distribution
@@ -231,12 +241,25 @@ contract GOLDX is Context, IGOLDX, Ownable, AccessControl, Pausable {
     function setFeeDistribution(uint256 _toHolders, uint256 _toTreasury, uint256 _toBurn, uint256 _toReferrals) public whenNotPaused onlyOwner{
         require(feeAmount !=0, "GOLDX: TRANSACTION FEE IS ZERO");
         uint256 sum = _toHolders + _toTreasury + _toBurn + _toReferrals;
-        //TODO REFACTOR AND TEST SUM CHECK
-        require(sum.div(10) == feeAmount, "GOLDX: WRONG DISTRIBUTION, SUM MUST EQUAL FEE");
+        require(sum == 100, "GOLDX: WRONG DISTRIBUTION, SUM MUST EQUAL 100%");
         feeToHolders = _toHolders;
         feeToTreasury = _toTreasury;
         feeToBurn = _toBurn;
         feeToReferrals = _toReferrals;
+    }
+
+    /// @notice returns fee distribution
+    /// @return feeToHolders  holders share
+    /// @return feeToTreasury  treasury share
+    /// @return feeToBurn burn wallet share
+    /// @return feeToReferrals referrals share
+    function getFeeDistribution() public view returns(uint256, uint256, uint256, uint256) {
+        return(
+            feeToHolders,
+            feeToTreasury,
+            feeToBurn,
+            feeToReferrals
+        );
     }
 
     /// @notice returns amount of collected fees
@@ -291,7 +314,7 @@ contract GOLDX is Context, IGOLDX, Ownable, AccessControl, Pausable {
         require(amount > 0, "Transfer amount must be greater than zero");
         
         if (referrers.contains(sender) || referrals.contains(sender)) {
-            uint256 tReward = getReferralReward() - snapshot[sender];
+            uint256 tReward = getCompositeReferralReward() - snapshot[sender];
             uint256 rReward = tReward.add(personalReward[sender]).mul(_getRate());
             _rOwned[sender] = _rOwned[sender].add(rReward);
             snapshot[sender] = snapshot[sender].add(tReward);
@@ -348,7 +371,6 @@ contract GOLDX is Context, IGOLDX, Ownable, AccessControl, Pausable {
     }
 
     function _reflectAndProcessFee(uint256 rFee, uint256 tFee) private {
-    /// TODO MAKE BURN AND MINT FUNCTIONS
         (uint256 rToHolders, uint256 rToTreasury, uint256 rToBurn, uint256 rToReferrals) = _getFeeDistribution(rFee);
         uint256 tToBurn = tokenFromReflection(rToBurn);
         uint256 tToTreasury = tokenFromReflection(rToTreasury);
@@ -357,9 +379,11 @@ contract GOLDX is Context, IGOLDX, Ownable, AccessControl, Pausable {
         if(referrer[msg.sender] != address(0)) {
             personalReward[msg.sender] = personalReward[msg.sender].add(tToReferrals.div(2));
             personalReward[referrer[msg.sender]] = personalReward[referrer[msg.sender]].add(tToReferrals.div(2));
+            _rReferralReward = _rReferralReward.add(rToReferrals);
+            _tReferralReward = _tReferralReward.add(tToReferrals);
         // else all referrals and referrers ahare equal amount of toReferrals value
         } else {
-            totalReferralReward = totalReferralReward.add(tToReferrals);
+            compositeReferralReward = compositeReferralReward.add(tToReferrals);
             _rReferralReward = _rReferralReward.add(rToReferrals);
             _tReferralReward = _tReferralReward.add(tToReferrals);
         }
@@ -370,7 +394,9 @@ contract GOLDX is Context, IGOLDX, Ownable, AccessControl, Pausable {
         _rTotal = _rTotal.sub(rToHolders).sub(rToBurn);
         _tTotal = _tTotal.sub(tToBurn);
         _tFeeTotal = _tFeeTotal.add(tFee);
+
         emit Transfer(msg.sender, address(0), tToBurn);
+        emit Transfer(msg.sender, treasury, tToTreasury);
     }
 
     function _getValues(uint256 tAmount) private view returns (uint256, uint256, uint256, uint256, uint256) {
@@ -381,7 +407,7 @@ contract GOLDX is Context, IGOLDX, Ownable, AccessControl, Pausable {
     }
 
     function _getTValues(uint256 tAmount) private view returns (uint256, uint256) {
-        uint256 tFee;
+        uint256 tFee = 0;
         // Whitelisted users don't pay fees
         if(!whitelist[msg.sender])
             tFee = tAmount.mul(feeAmount).div(PCT_RATE);
@@ -429,24 +455,28 @@ contract GOLDX is Context, IGOLDX, Ownable, AccessControl, Pausable {
     /// @param account user's address
     function addToWhitelist(address account) public whenNotPaused onlyRole(SUPERADMIN_ROLE){
         whitelist[account] = true;
+        emit AddToWhitelist(account);
     }
 
     /// @notice add user to the blacklist
     /// @param account user's address
     function addToBlacklist(address account) public whenNotPaused onlyRole(SUPERADMIN_ROLE){
         blacklist[account] = true;
+        emit AddToBlacklist(account);
     }
 
     /// @notice remove user from the whitelist
     /// @param account user's address
     function removeFromWhitelist(address account) public whenNotPaused onlyRole(SUPERADMIN_ROLE){
         whitelist[account] = false;
+        emit RemoveFromWhitelist(account);
     }
 
     /// @notice remove user from the blacklist
     /// @param account user's address
     function removeFromBlacklist(address account) public whenNotPaused onlyRole(SUPERADMIN_ROLE){
         blacklist[account] = false;
+        emit RemoveFromBlacklist(account);
     }
 
     /// @notice pause the contract
@@ -503,10 +533,10 @@ contract GOLDX is Context, IGOLDX, Ownable, AccessControl, Pausable {
     /// @param account referrer's address
     function addReferrer(address account) public whenNotPaused onlyRole(SUPERADMIN_ROLE) {
         require(!referrers.contains(account), "GOLDX: REFERRER ALREADY EXISTS");
-        snapshot[account] = getReferralReward();
-        totalReferralReward = totalReferralReward.add(getReferralReward());
+        snapshot[account] = getCompositeReferralReward();
+        compositeReferralReward = compositeReferralReward.add(getCompositeReferralReward());
         referrers.add(account);
-        if(!referrals.contains(msg.sender))
+        if(!referrals.contains(account))
             uniqueUsersCount ++;
     }
 
@@ -522,14 +552,23 @@ contract GOLDX is Context, IGOLDX, Ownable, AccessControl, Pausable {
     /// @param _referrer referrer's address
     function setReferrer(address _referrer) public whenNotPaused {
         require(referrers.contains(_referrer), "GOLDX: REFERRER DOES NOT EXIST");
+        require(block.timestamp > timestamp[msg.sender] + cooldown, "GOLDX: COOLDOWN IN PROGRESS");
+
         referrer[msg.sender] = _referrer;
+        timestamp[msg.sender] = block.timestamp;
         if(!referrals.contains(msg.sender)) {
-            snapshot[msg.sender] = getReferralReward();
-            totalReferralReward = totalReferralReward.add(getReferralReward());
+            snapshot[msg.sender] = getCompositeReferralReward();
+            compositeReferralReward = compositeReferralReward.add(getCompositeReferralReward());
             referrals.add(msg.sender);
         }
         if(!referrers.contains(msg.sender))
             uniqueUsersCount ++;
+    }
+
+    /// @notice sets a cooldown after which a referral can change his referrer again
+    /// @param _cooldown cooldown in seconds
+    function setReferralCooldown(uint256 _cooldown) public whenNotPaused onlyOwner {
+        cooldown = _cooldown;
     }
 
     /// @notice returns referrer's addres of the msg.sender
@@ -537,7 +576,7 @@ contract GOLDX is Context, IGOLDX, Ownable, AccessControl, Pausable {
         return referrer[msg.sender];
     }
 
-    /// @notice returns list of referrer
+    /// @notice returns list of referrers
     function getReferrersList() public view returns(address[] memory) {
         return referrers.values();
     }
@@ -547,10 +586,15 @@ contract GOLDX is Context, IGOLDX, Ownable, AccessControl, Pausable {
         return referrals.values();
     }
 
-    function getReferralReward() private view returns(uint256) {
+    /// @notice returns amount of GoldX distributed to referral program
+    function getReferralReward() public view returns(uint256) {
+        return _tReferralReward;
+    }
+
+    function getCompositeReferralReward() private view returns(uint256) {
         uint256 referralProgrammAccounts = uniqueUsersCount;
         if (referralProgrammAccounts == 0)
             return 0;
-        return totalReferralReward / referralProgrammAccounts;
+        return compositeReferralReward / referralProgrammAccounts;
     }
 }
