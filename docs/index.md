@@ -1140,7 +1140,9 @@ function mineGoldX(address sender, uint256 fuseGAmount) external
 ```
 > Only FuseG token can call
 
-Called by FuseG token, mines GoldX to FuseG holders. During transactions with FuseG tokens sender receives/mines a small amount of GoldX tokens based on the current phase in the reward vault. For example if Alice sends X amount of FuseG to Bob, she then receives X*coeff amount of GoldX from the vault, where coeff is the current phase's coefficient.
+> GoldX is only mined when users buy/sell FuseG via platform or DEX 
+
+Called by FuseG token, mines GoldX to FuseG holders. During transactions with FuseG tokens sender receives/mines a small amount of GoldX tokens based on the current phase in the reward vault. For example if Alice sells X amount of FuseG, she then receives X*coeff amount of GoldX from the vault, where coeff is the current phase's coefficient.
 
 #### Parameters
 
