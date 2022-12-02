@@ -3,7 +3,6 @@
 pragma solidity ^0.8.0;
 
 interface IRewardVault {
-    
     /// @notice event indicating set of the new round
     /// @param roundSupply GoldX amount in one round
     /// @param phaseSupply GoldX amount in one phase
@@ -17,7 +16,12 @@ interface IRewardVault {
     event RewardVaultDepleted();
 
     function mineGoldX(address sender, uint256 fuseGAmount) external;
-    function setNewRound(uint256 _phaseSupply, uint8 _phaseCount, uint256[] memory _coeffs) external;
+
+    function setNewRound(
+        uint256 _phaseSupply,
+        uint8 _phaseCount,
+        uint256[] memory _coeffs
+    ) external;
+
     function changeOwner(address newOwner) external;
 }
-
