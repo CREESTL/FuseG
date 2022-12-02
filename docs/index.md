@@ -1,4 +1,5 @@
-# *FUSE GOLD CONTRACTS*
+# _FUSE GOLD CONTRACTS_
+
 [GoldX.sol](#goldxsol)
 
 - [ERC20 Functions](#erc20-functions)
@@ -11,13 +12,17 @@
 [IGoldX.sol](#igoldxsol)\
 [IMultiSigVault.sol](#imultisigvaultsol)\
 [IRewardVault.sol](#irewardvaultsol)
+
 # GoldX.sol
+
 ## ERC20 Functions
+
 ### marketing
 
 ```solidity
 address marketing
 ```
+
 Marketing wallet address
 
 ### treasury
@@ -25,6 +30,7 @@ Marketing wallet address
 ```solidity
 address treasury
 ```
+
 Treasury wallet address
 
 ### rewardVault
@@ -40,6 +46,7 @@ Reward vault Address
 ```solidity
 address multiSigVault
 ```
+
 Multi-signature vault address
 
 ### constructor
@@ -60,13 +67,13 @@ Msg.sender becomes an owner of the token and also is granted superadmin rights.
 
 #### Parameters
 
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| _teamWallet | address | team wallet address |
-| _marketing | address | marketing wallet address |
-| _treasury | address | treasury address |
-| _rewardVault | address | reward vault address |
-| _multiSigVault | address | multi-signature vault address |
+| Name            | Type    | Description                   |
+| --------------- | ------- | ----------------------------- |
+| \_teamWallet    | address | team wallet address           |
+| \_marketing     | address | marketing wallet address      |
+| \_treasury      | address | treasury address              |
+| \_rewardVault   | address | reward vault address          |
+| \_multiSigVault | address | multi-signature vault address |
 
 ### name
 
@@ -110,8 +117,8 @@ Returns user's balance
 
 #### Parameters
 
-| Name | Type | Description |
-| ---- | ---- | ----------- |
+| Name    | Type    | Description    |
+| ------- | ------- | -------------- |
 | account | address | user's address |
 
 ### transfer
@@ -134,29 +141,29 @@ Transfers tokens to a given address
 
 If the sender is in the whitelist he doesn't pay transaction fees, otherwise transaction fees are deducted from {amount} and distributed accordingly to the fee distribution plan.
 
- For example
- 
- - fee amount - 10%
- - holders share - 7%
- - treasury share - 1%
- - burn share - 1%
- - referral program share - 1%
- 
- Alice sends Bob 100 GoldX tokens, 10 GoldX deducted as a transaction fee, of this fee 7 GoldX are shared between all holders of GoldX who haven't been excluded from the reflection, 1 GoldX goes to treasury, 1Goldx is burned and 1 GoldX are equally shared between referral program participants. Bob receives 90 GoldX.
- If Alice is the referral of Charlie who is referrer in this case, they split 1 GoldX between themselves.
+For example
+
+- fee amount - 10%
+- holders share - 7%
+- treasury share - 1%
+- burn share - 1%
+- referral program share - 1%
+
+Alice sends Bob 100 GoldX tokens, 10 GoldX deducted as a transaction fee, of this fee 7 GoldX are shared between all holders of GoldX who haven't been excluded from the reflection, 1 GoldX goes to treasury, 1Goldx is burned and 1 GoldX are equally shared between referral program participants. Bob receives 90 GoldX.
+If Alice is the referral of Charlie who is referrer in this case, they split 1 GoldX between themselves.
 
 #### Parameters
 
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| recipient | address | recipient's address |
-| amount | uint256 | amount of tokens to send |
+| Name      | Type    | Description              |
+| --------- | ------- | ------------------------ |
+| recipient | address | recipient's address      |
+| amount    | uint256 | amount of tokens to send |
 
 #### Return Values
 
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| [0] | bool | boolean value indicating whether the operation succeeded. |
+| Name | Type | Description                                               |
+| ---- | ---- | --------------------------------------------------------- |
+| [0]  | bool | boolean value indicating whether the operation succeeded. |
 
 ### allowance
 
@@ -168,38 +175,40 @@ Returns the amount of tokens that spender allowed to spend on behalf of the owne
 
 #### Parameters
 
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| owner | address | owner of the tokens |
-| spender | address | spender's address |
+| Name    | Type    | Description         |
+| ------- | ------- | ------------------- |
+| owner   | address | owner of the tokens |
+| spender | address | spender's address   |
 
 ### approve
 
 ```solidity
 function approve(address spender, uint256 amount) public returns (bool)
 ```
+
 > Cannot be called if the contract is paused
-> 
-Allows spender to spend tokens on behalf of the transaction sender via transferFrom
+>
+> Allows spender to spend tokens on behalf of the transaction sender via transferFrom
 
 #### Parameters
 
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| spender | address | spender's address |
-| amount | uint256 | amount of tokens that spender is allowed to spent |
+| Name    | Type    | Description                                       |
+| ------- | ------- | ------------------------------------------------- |
+| spender | address | spender's address                                 |
+| amount  | uint256 | amount of tokens that spender is allowed to spent |
 
 #### Return Values
 
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| [0] | bool | boolean value indicating whether the operation succeeded. |
+| Name | Type | Description                                               |
+| ---- | ---- | --------------------------------------------------------- |
+| [0]  | bool | boolean value indicating whether the operation succeeded. |
 
 ### transferFrom
 
 ```solidity
 function transferFrom(address sender, address recipient, uint256 amount) public returns (bool)
 ```
+
 > Cannot transfer to a zero address
 
 > Cannot transfer from a zero address
@@ -216,17 +225,17 @@ Transfers tokens to a given address on behalf of the owner. See transfer functio
 
 #### Parameters
 
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| sender | address | sender's address |
+| Name      | Type    | Description         |
+| --------- | ------- | ------------------- |
+| sender    | address | sender's address    |
 | recipient | address | recipient's address |
-| amount | uint256 | amount of tokens |
+| amount    | uint256 | amount of tokens    |
 
 #### Return Values
 
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| [0] | bool | boolean value indicating whether the operation succeeded. |
+| Name | Type | Description                                               |
+| ---- | ---- | --------------------------------------------------------- |
+| [0]  | bool | boolean value indicating whether the operation succeeded. |
 
 ### increaseAllowance
 
@@ -240,38 +249,39 @@ Increase amount of tokens to spend on behalf of an owner
 
 #### Parameters
 
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| spender | address | sender's address |
+| Name       | Type    | Description      |
+| ---------- | ------- | ---------------- |
+| spender    | address | sender's address |
 | addedValue | uint256 | amount of tokens |
 
 #### Return Values
 
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| [0] | bool | boolean value indicating whether the operation succeeded. |
+| Name | Type | Description                                               |
+| ---- | ---- | --------------------------------------------------------- |
+| [0]  | bool | boolean value indicating whether the operation succeeded. |
 
 ### decreaseAllowance
 
 ```solidity
 function decreaseAllowance(address spender, uint256 subtractedValue) public virtual returns (bool)
 ```
+
 > Cannot be called if the contract is paused
 
 Decrease amount of tokens to spend on behalf of an owner
 
 #### Parameters
 
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| spender | address | sender's address |
+| Name            | Type    | Description      |
+| --------------- | ------- | ---------------- |
+| spender         | address | sender's address |
 | subtractedValue | uint256 | amount of tokens |
 
 #### Return Values
 
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| [0] | bool | boolean value indicating whether the operation succeeded. |
+| Name | Type | Description                                               |
+| ---- | ---- | --------------------------------------------------------- |
+| [0]  | bool | boolean value indicating whether the operation succeeded. |
 
 ### isExcluded
 
@@ -283,8 +293,8 @@ Checks if user is excluded from fees reflection (toHolders %)
 
 #### Parameters
 
-| Name | Type | Description |
-| ---- | ---- | ----------- |
+| Name    | Type    | Description    |
+| ------- | ------- | -------------- |
 | account | address | user's address |
 
 ### reflect
@@ -292,15 +302,16 @@ Checks if user is excluded from fees reflection (toHolders %)
 ```solidity
 function reflect(uint256 tAmount) public
 ```
+
 > Cannot be called if the contract is paused
-> 
-Reflects/distributes tAmount between non-excluded holders. GoldX is based on RFI token which distributes a share of transaction fees through so called reflections, each holder gains his share based on the amount of GoldX tokens on his balance. The more tokens you have, the bigger share you receive.
-Please consult this document https://reflect-contract-doc.netlify.app/ on the basics of reflections and operations with r-space and t-space. 
+>
+> Reflects/distributes tAmount between non-excluded holders. GoldX is based on RFI token which distributes a share of transaction fees through so called reflections, each holder gains his share based on the amount of GoldX tokens on his balance. The more tokens you have, the bigger share you receive.
+> Please consult this document https://reflect-contract-doc.netlify.app/ on the basics of reflections and operations with r-space and t-space.
 
 #### Parameters
 
-| Name | Type | Description |
-| ---- | ---- | ----------- |
+| Name    | Type    | Description                    |
+| ------- | ------- | ------------------------------ |
 | tAmount | uint256 | amount of tokens to distribute |
 
 ### reflectionFromToken
@@ -313,10 +324,10 @@ Transforms token amount from t-space to r-space
 
 #### Parameters
 
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| tAmount | uint256 | amount of tokens in r-space |
-| deductTransferFee | bool | true if fee should be deducted |
+| Name              | Type    | Description                    |
+| ----------------- | ------- | ------------------------------ |
+| tAmount           | uint256 | amount of tokens in r-space    |
+| deductTransferFee | bool    | true if fee should be deducted |
 
 ### tokenFromReflection
 
@@ -328,11 +339,12 @@ Transforms token amount from r-space to t-space
 
 #### Parameters
 
-| Name | Type | Description |
-| ---- | ---- | ----------- |
+| Name    | Type    | Description             |
+| ------- | ------- | ----------------------- |
 | rAmount | uint256 | token amount in r-space |
 
 ## Fees
+
 ### feeAmount
 
 ```solidity
@@ -346,41 +358,43 @@ Transaction fee (%)
 ```solidity
 function setFees(uint256 _feeAmount) public
 ```
+
 > Cannot be called if the contract is paused
 
-> Only owner can call 
+> Only owner can call
 
-> must be 0 >= {_feeAmount} <= 15  
+> must be 0 >= {\_feeAmount} <= 15
 
-Set transaction fees amount, {_feeAmount} value is in %
+Set transaction fees amount, {\_feeAmount} value is in %
 
 #### Parameters
 
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| _feeAmount | uint256 | transaction fee amount %|
+| Name        | Type    | Description              |
+| ----------- | ------- | ------------------------ |
+| \_feeAmount | uint256 | transaction fee amount % |
 
 ### setFeeDistribution
 
 ```solidity
 function setFeeDistribution(uint256 _toHolders, uint256 _toTreasury, uint256 _toBurn, uint256 _toReferrals) public
 ```
+
 > Cannot be called if the contract is paused
 
-> Only owner can call 
+> Only owner can call
 
-> {_toHolders} + {_toTreasury} + {_toBurn} + {_toReferrals} must be equal 100%
+> {\_toHolders} + {\_toTreasury} + {\_toBurn} + {\_toReferrals} must be equal 100%
 
 Set fee distribution. Determines what percentage of transaction fee shared by holders, treasury, burned and goes to referrals. Example setFeeDistribution(70,10,10,10).
 
 #### Parameters
 
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| _toHolders | uint256 | fee share to token holders %|
-| _toTreasury | uint256 | fee share to treasury %|
-| _toBurn | uint256 | fee share to burn %|
-| _toReferrals | uint256 | fee share to referrals %|
+| Name          | Type    | Description                  |
+| ------------- | ------- | ---------------------------- |
+| \_toHolders   | uint256 | fee share to token holders % |
+| \_toTreasury  | uint256 | fee share to treasury %      |
+| \_toBurn      | uint256 | fee share to burn %          |
+| \_toReferrals | uint256 | fee share to referrals %     |
 
 ### totalFees
 
@@ -391,16 +405,19 @@ function totalFees() public view returns (uint256)
 Returns total amount of fees paid by users.
 
 ### getFeeDistribution
+
 ```solidity
 function getFeeDistribution() public view returns (uint256)
 ```
+
 #### Return Value
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| _toHolders | uint256 | fee share to token holders %|
-| _toTreasury | uint256 | fee share to treasury %|
-| _toBurn | uint256 | fee share to burn %|
-| _toReferrals | uint256 | fee share to referrals %|
+
+| Name          | Type    | Description                  |
+| ------------- | ------- | ---------------------------- |
+| \_toHolders   | uint256 | fee share to token holders % |
+| \_toTreasury  | uint256 | fee share to treasury %      |
+| \_toBurn      | uint256 | fee share to burn %          |
+| \_toReferrals | uint256 | fee share to referrals %     |
 
 Returns shares of fees distributed by the contract.
 
@@ -427,6 +444,7 @@ Blacklist mapping, returns {true} if user's address is in the blacklist, {false}
 ```solidity
 mapping(address => bool) whitelist
 ```
+
 ### notInBlacklist
 
 ```solidity
@@ -437,8 +455,8 @@ Checks if user is in the blacklist
 
 #### Parameters
 
-| Name | Type | Description |
-| ---- | ---- | ----------- |
+| Name    | Type    | Description    |
+| ------- | ------- | -------------- |
 | account | address | user's address |
 
 Whitelist mapping, returns {true} if user's address is in the blacklist, {false} otherwise.
@@ -453,58 +471,61 @@ Returns true if {account} has the admin role. Example hasRole(SUPERADMIN_ROLE, a
 
 #### Parameters
 
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| role | bytes32 | encoded string with the role name |
-| account | address | referrer's address |
+| Name    | Type    | Description                       |
+| ------- | ------- | --------------------------------- |
+| role    | bytes32 | encoded string with the role name |
+| account | address | referrer's address                |
 
 ### grantRole
 
 ```solidity
 function grantRole(bytes32 role, address account) public
 ```
-> Only owner  can call 
+
+> Only owner can call
 
 Grant role to a user. Example grantRole(SUPERADMIN_ROLE, admin1.address).
 
 #### Parameters
 
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| role | bytes32 | encoded string with the role name |
-| account | address | referrer's address |
+| Name    | Type    | Description                       |
+| ------- | ------- | --------------------------------- |
+| role    | bytes32 | encoded string with the role name |
+| account | address | referrer's address                |
 
 ### revokeRole
 
 ```solidity
 function revokeRole(bytes32 role, address account) public
 ```
-> Only owner  can call 
+
+> Only owner can call
 
 Revoke role from a user. Example revokeRole(SUPERADMIN_ROLE, admin1.address).
 
 #### Parameters
 
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| role | bytes32 | encoded string with the role name |
-| account | address | referrer's address |
+| Name    | Type    | Description                       |
+| ------- | ------- | --------------------------------- |
+| role    | bytes32 | encoded string with the role name |
+| account | address | referrer's address                |
 
 ### addToWhitelist
 
 ```solidity
 function addToWhitelist(address account) public
 ```
+
 > Cannot be called if the contract is paused
 
-> Only owner or superadmin can call 
+> Only owner or superadmin can call
 
 Add user to the whitelist. Users in the whitelist don't pay transaction fees.
 
 #### Parameters
 
-| Name | Type | Description |
-| ---- | ---- | ----------- |
+| Name    | Type    | Description    |
+| ------- | ------- | -------------- |
 | account | address | user's address |
 
 ### addToBlacklist
@@ -512,16 +533,17 @@ Add user to the whitelist. Users in the whitelist don't pay transaction fees.
 ```solidity
 function addToBlacklist(address account) public
 ```
+
 > Cannot be called if the contract is paused
 
-> Only owner or superadmin can call 
-> 
-Add user to the blacklist. Users in the blacklist are not allowed to make transactions with  GoldX.
+> Only owner or superadmin can call
+>
+> Add user to the blacklist. Users in the blacklist are not allowed to make transactions with GoldX.
 
 #### Parameters
 
-| Name | Type | Description |
-| ---- | ---- | ----------- |
+| Name    | Type    | Description    |
+| ------- | ------- | -------------- |
 | account | address | user's address |
 
 ### removeFromWhitelist
@@ -529,16 +551,17 @@ Add user to the blacklist. Users in the blacklist are not allowed to make transa
 ```solidity
 function removeFromWhitelist(address account) public
 ```
+
 > Cannot be called if the contract is paused
 
-> Only owner or superadmin can call 
+> Only owner or superadmin can call
 
 Remove user from the whitelist
 
 #### Parameters
 
-| Name | Type | Description |
-| ---- | ---- | ----------- |
+| Name    | Type    | Description    |
+| ------- | ------- | -------------- |
 | account | address | user's address |
 
 ### removeFromBlacklist
@@ -546,16 +569,17 @@ Remove user from the whitelist
 ```solidity
 function removeFromBlacklist(address account) public
 ```
+
 > Cannot be called if the contract is paused
 
-> Only owner or superadmin can call 
+> Only owner or superadmin can call
 
 Remove user from the blacklist
 
 #### Parameters
 
-| Name | Type | Description |
-| ---- | ---- | ----------- |
+| Name    | Type    | Description    |
+| ------- | ------- | -------------- |
 | account | address | user's address |
 
 ### pause
@@ -563,7 +587,8 @@ Remove user from the blacklist
 ```solidity
 function pause() public
 ```
-> Only owner or superadmin can call 
+
+> Only owner or superadmin can call
 
 Pause the contract. All operations with GoldX are not allowed.
 
@@ -572,7 +597,8 @@ Pause the contract. All operations with GoldX are not allowed.
 ```solidity
 function unpause() public
 ```
-> Only owner or superadmin can call 
+
+> Only owner or superadmin can call
 
 Unpause the contract.
 
@@ -581,16 +607,17 @@ Unpause the contract.
 ```solidity
 function excludeAccount(address account) public
 ```
+
 > Cannot be called if the contract is paused
 
-> Only owner can call 
+> Only owner can call
 
 Remove user from the fees (toHolders %) distribution.
 
 #### Parameters
 
-| Name | Type | Description |
-| ---- | ---- | ----------- |
+| Name    | Type    | Description    |
+| ------- | ------- | -------------- |
 | account | address | user's address |
 
 ### includeAccount
@@ -598,16 +625,17 @@ Remove user from the fees (toHolders %) distribution.
 ```solidity
 function includeAccount(address account) public
 ```
+
 > Cannot be called if the contract is paused
 
-> Only owner can call 
+> Only owner can call
 
 Add user to the fees (toHolders %) distribution
 
 #### Parameters
 
-| Name | Type | Description |
-| ---- | ---- | ----------- |
+| Name    | Type    | Description    |
+| ------- | ------- | -------------- |
 | account | address | user's address |
 
 ### changeOwner
@@ -615,24 +643,27 @@ Add user to the fees (toHolders %) distribution
 ```solidity
 function changeOwner(address newOwner) external
 ```
+
 > Cannot be called if the contract is paused
 
 > Only multi-signature vault can call
- 
+
 Multi-signature vault can change owner of the token and both vaults if enough multisigners have voted for this proposal.
 
 #### Parameters
 
-| Name | Type | Description |
-| ---- | ---- | ----------- |
+| Name     | Type    | Description                     |
+| -------- | ------- | ------------------------------- |
 | newOwner | address | new owner of the token contract |
 
-## Referral Program Functions 
+## Referral Program Functions
 
 ### cooldown
+
 ```solidity
 uint256 cooldown
 ```
+
 Time value in seconds after which user can change his referrer again. Default value 90 days.
 
 ### referrer
@@ -648,16 +679,17 @@ Mapping that returns referrer's address for a given referral's address
 ```solidity
 function addReferrer(address account) public
 ```
+
 > Cannot be called if the contract is paused
 
-> Only owner or superadmin can call 
+> Only owner or superadmin can call
 
 Add a referrer. This account can be binded to a referral to receive referrals share of the transaction fee. Can receive referral program share.
 
 #### Parameters
 
-| Name | Type | Description |
-| ---- | ---- | ----------- |
+| Name    | Type    | Description        |
+| ------- | ------- | ------------------ |
 | account | address | referrer's address |
 
 ### addReferrers
@@ -665,16 +697,17 @@ Add a referrer. This account can be binded to a referral to receive referrals sh
 ```solidity
 function addReferrers(address[] accounts) public
 ```
+
 > Cannot be called if the contract is paused
 
-> Only owner or superadmin can call 
+> Only owner or superadmin can call
 
 Add multiple referrers
 
 #### Parameters
 
-| Name | Type | Description |
-| ---- | ---- | ----------- |
+| Name     | Type      | Description        |
+| -------- | --------- | ------------------ |
 | accounts | address[] | array of referrers |
 
 ### setReferrer
@@ -682,34 +715,36 @@ Add multiple referrers
 ```solidity
 function setReferrer(address _referrer) public
 ```
+
 > Cannot be called if the contract is paused
 
->Time between referrer changes can be no less than a cooldown value (90 days by default)
+> Time between referrer changes can be no less than a cooldown value (90 days by default)
 
 User can call this function to become a referral and bind his address to the referrer of his choice. Whenever he makes a transaction he splits a referral share of the fee with his referrer. Can receive referral share.
 
 #### Parameters
 
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| _referrer | address | referrer's address |
+| Name       | Type    | Description        |
+| ---------- | ------- | ------------------ |
+| \_referrer | address | referrer's address |
 
 ### setReferralCooldown
 
 ```solidity
 function setReferralCooldown(uint256 _cooldown) public
 ```
+
 > Cannot be called if the contract is paused
 
->Only owner can call this function
+> Only owner can call this function
 
-Owner can set a cooldown which restricts a referral from changing his referrer if a '_cooldown' amount of seconds hasn't passed.
+Owner can set a cooldown which restricts a referral from changing his referrer if a '\_cooldown' amount of seconds hasn't passed.
 
 #### Parameters
 
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| _cooldown | uint256 | cooldown, secs |
+| Name       | Type    | Description    |
+| ---------- | ------- | -------------- |
+| \_cooldown | uint256 | cooldown, secs |
 
 ### getMyReferrer
 
@@ -735,16 +770,14 @@ function getReferralsList() public view returns (address[])
 
 Returns list of referrals
 
-
-
 # MultiSigVault.sol
-
 
 ### isConfirmed
 
 ```solidity
 mapping(uint256 => mapping(address => bool)) isConfirmed
 ```
+
 Proposal confirmation mapping (proposalId -> multisigner -> bool)
 
 ### onlySigner
@@ -765,9 +798,9 @@ Checks if proposal exists inside the proposals array
 
 #### Parameters
 
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| _proposalIndex | uint256 | proposal index inside proposals array |
+| Name            | Type    | Description                           |
+| --------------- | ------- | ------------------------------------- |
+| \_proposalIndex | uint256 | proposal index inside proposals array |
 
 ### notExecuted
 
@@ -779,9 +812,9 @@ Checks if proposal has been already executed
 
 #### Parameters
 
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| _proposalIndex | uint256 | proposal index inside proposals array |
+| Name            | Type    | Description                           |
+| --------------- | ------- | ------------------------------------- |
+| \_proposalIndex | uint256 | proposal index inside proposals array |
 
 ### notConfirmed
 
@@ -793,9 +826,9 @@ Checks if proposal has been already confirmed by the user
 
 #### Parameters
 
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| _proposalIndex | uint256 | proposal index inside proposals array |
+| Name            | Type    | Description                           |
+| --------------- | ------- | ------------------------------------- |
+| \_proposalIndex | uint256 | proposal index inside proposals array |
 
 ### constructor
 
@@ -807,9 +840,9 @@ Inside the constructor we assign initial multisigners. Must provide at least one
 
 #### Parameters
 
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| _signers | address[] | array of signer addresses |
+| Name      | Type      | Description               |
+| --------- | --------- | ------------------------- |
+| \_signers | address[] | array of signer addresses |
 
 ### initialize
 
@@ -821,40 +854,41 @@ Initializes fuseG platform addresses.
 
 #### Parameters
 
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| _goldX | address | GoldX token address |
-| _rewardVault | address | reward vault address |
+| Name          | Type    | Description          |
+| ------------- | ------- | -------------------- |
+| \_goldX       | address | GoldX token address  |
+| \_rewardVault | address | reward vault address |
 
 ### setNewRound
 
 ```solidity
 function setNewRound(uint256 _phaseSupply, uint8 _phaseCount, uint256[] _coeffs) public
 ```
-> Only owner can call 
+
+> Only owner can call
 
 > Can be called if previous round has ended, vault distributed all the GoldX tokens
 
-> {_coeffs.length} must be equal to {_phaseCount}
+> {\_coeffs.length} must be equal to {\_phaseCount}
 
-> Reward vault's balance should be at least {_phaseSupply} x {_phaseCount} 
+> Reward vault's balance should be at least {\_phaseSupply} x {\_phaseCount}
 
-Sets new round. Loads a reward distribution table in the reward vault contract. 
-For example: 
+Sets new round. Loads a reward distribution table in the reward vault contract.
+For example:
 
-- _phaseSupply - 9,952,381 * 10 ** goldX.decimals()
-- _phaseCount - 20
-- _coeffs - [coeff1, coeff2. coeff3...], each coefficient should be multiplied by 10 ** goldX.decimals()
+- \_phaseSupply - 9,952,381 \* 10 \*\* goldX.decimals()
+- \_phaseCount - 20
+- \_coeffs - [coeff1, coeff2. coeff3...], each coefficient should be multiplied by 10 \*\* goldX.decimals()
 
 There would be 20 phases with 9,952,381 supply each, phases have their own mining coefficients that are applied to FuseG amount during transactions with FuseG token.
 
 #### Parameters
 
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| _phaseSupply | uint256 | GoldX amount in one phase |
-| _phaseCount | uint8 | amount of phases |
-| _coeffs | uint256[] | FuseG : GoldX coefficient for each phase |
+| Name          | Type      | Description                              |
+| ------------- | --------- | ---------------------------------------- |
+| \_phaseSupply | uint256   | GoldX amount in one phase                |
+| \_phaseCount  | uint8     | amount of phases                         |
+| \_coeffs      | uint256[] | FuseG : GoldX coefficient for each phase |
 
 ### addMultiSigner
 
@@ -862,15 +896,15 @@ There would be 20 phases with 9,952,381 supply each, phases have their own minin
 function addMultiSigner(address _newSigner) public
 ```
 
-> Only owner can call 
+> Only owner can call
 
 Owner can manually add a multisigner.
 
 #### Parameters
 
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| _newSigner | address | new multi-signer address |
+| Name        | Type    | Description              |
+| ----------- | ------- | ------------------------ |
+| \_newSigner | address | new multi-signer address |
 
 ### removeMultiSigner
 
@@ -878,38 +912,39 @@ Owner can manually add a multisigner.
 function removeMultiSigner(address _signer) public
 ```
 
-> Only owner can call 
+> Only owner can call
 
 Owner can manually remove a multisigner.
 
 #### Parameters
 
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| _signer | address | multi-signer address |
+| Name     | Type    | Description          |
+| -------- | ------- | -------------------- |
+| \_signer | address | multi-signer address |
 
 ### submitProposal
 
 ```solidity
 function submitProposal(enum IMultiSigVault.Proposals _proposalType, address _to, uint256 _amount) public
 ```
-> Only multisigner can call 
+
+> Only multisigner can call
 
 Submits a proposal. There are 4 types of proposals
 
-- 0 - transfer {_amount} of GoldX tokens to {_to} address
-- 1 - add new multsigner with {_to} address
-- 2 - remove multisigner with {_to} address
-- 3 - change the owner of GoldX token and both vaults to {_to} address
-In every type of proposal besides type 0 argument {_amount} can be set to it's default value 0.
+- 0 - transfer {\_amount} of GoldX tokens to {\_to} address
+- 1 - add new multsigner with {\_to} address
+- 2 - remove multisigner with {\_to} address
+- 3 - change the owner of GoldX token and both vaults to {\_to} address
+  In every type of proposal besides type 0 argument {\_amount} can be set to it's default value 0.
 
 #### Parameters
 
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| _proposalType | enum IMultiSigVault.Proposals | see Proposals enum |
-| _to | address | subject of the proposal |
-| _amount | uint256 | GoldX amount to send if tx type proposal |
+| Name           | Type                          | Description                              |
+| -------------- | ----------------------------- | ---------------------------------------- |
+| \_proposalType | enum IMultiSigVault.Proposals | see Proposals enum                       |
+| \_to           | address                       | subject of the proposal                  |
+| \_amount       | uint256                       | GoldX amount to send if tx type proposal |
 
 ### confirmProposal
 
@@ -922,14 +957,14 @@ function confirmProposal(uint256 _proposalIndex) public
 > Can't confirm same proposal twice
 
 > Can't confirm executed proposal
-  
+
 Confirms the proposal
 
 #### Parameters
 
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| _proposalIndex | uint256 | index of the proposal inside proposals array |
+| Name            | Type    | Description                                  |
+| --------------- | ------- | -------------------------------------------- |
+| \_proposalIndex | uint256 | index of the proposal inside proposals array |
 
 ### executeProposal
 
@@ -947,15 +982,16 @@ Executes the proposal. To execute a proposal it must be confirmed by at least 50
 
 #### Parameters
 
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| _proposalIndex | uint256 | index of the proposal inside proposals array |
+| Name            | Type    | Description                                  |
+| --------------- | ------- | -------------------------------------------- |
+| \_proposalIndex | uint256 | index of the proposal inside proposals array |
 
 ### revokeConfirmation
 
 ```solidity
 function revokeConfirmation(uint256 _proposalIndex) public
 ```
+
 > Only multisigner can call
 
 > Can't revoke executed proposal
@@ -966,9 +1002,9 @@ Cancels confirmation of the proposal
 
 #### Parameters
 
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| _proposalIndex | uint256 | index of the proposal inside proposals array |
+| Name            | Type    | Description                                  |
+| --------------- | ------- | -------------------------------------------- |
+| \_proposalIndex | uint256 | index of the proposal inside proposals array |
 
 ### getSigners
 
@@ -1002,9 +1038,9 @@ Returns info on specific proposal
 
 #### Parameters
 
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| _proposalIndex | uint256 | index of the proposal inside proposals array |
+| Name            | Type    | Description                                  |
+| --------------- | ------- | -------------------------------------------- |
+| \_proposalIndex | uint256 | index of the proposal inside proposals array |
 
 ### getRewardVault
 
@@ -1024,12 +1060,12 @@ Returns GOLDX address
 
 # RewardVault.sol
 
-
 ### multiSigVault
 
 ```solidity
 address multiSigVault
 ```
+
 Multi-signature vault address
 
 ### fuseG
@@ -1039,6 +1075,7 @@ address fuseG
 ```
 
 FuseG token address
+
 ### roundSupply
 
 ```solidity
@@ -1046,7 +1083,6 @@ uint256 roundSupply
 ```
 
 Current round GoldX supply.
-
 
 ### vaultDepleted
 
@@ -1072,19 +1108,21 @@ mapping(uint8 => uint256) coeffTable
 ```
 
 Returns mining coefficient for a given phase (0, 1, 2...)
+
 ### currentRound
 
 ```solidity
 uint256 currentRound
 ```
-Returns current round number.
 
+Returns current round number.
 
 ### SUPPLY_ROLE
 
 ```solidity
 bytes32 SUPPLY_ROLE
 ```
+
 Encoded SUPPLY_ROLE string, use it with the access control functions (e.g. grantRole, revokeRole, hasRole). Role allows to call setNewRound function of the Reward vault.
 
 ### initialize
@@ -1097,60 +1135,61 @@ Initializes fuseG platform addresses. Grants msg.sender and multi-signer vault S
 
 #### Parameters
 
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| _fuseG | address | FuseG token address |
-| _goldX | address | GoldX token address |
-| _multiSigVault | address | multi-signature vault address |
+| Name            | Type    | Description                   |
+| --------------- | ------- | ----------------------------- |
+| \_fuseG         | address | FuseG token address           |
+| \_goldX         | address | GoldX token address           |
+| \_multiSigVault | address | multi-signature vault address |
 
 ### setNewRound
 
 ```solidity
 function setNewRound(uint256 _phaseSupply, uint8 _phaseCount, uint256[] _coeffs) external
 ```
+
 > Only owner or address with a SUPPLY_ROLE can call
 
 > Can be called if previous round has ended, vault distributed all the GoldX tokens
 
-> {_coeffs.length} must be equal to {_phaseCount}
+> {\_coeffs.length} must be equal to {\_phaseCount}
 
-> Reward vault's balance should be at least {_phaseSupply} x {_phaseCount} 
-> 
-Sets new round. Loads a reward distribution table in the reward vault contract. 
-For example: 
+> Reward vault's balance should be at least {\_phaseSupply} x {\_phaseCount}
+>
+> Sets new round. Loads a reward distribution table in the reward vault contract.
+> For example:
 
-- _phaseSupply - 9,952,381 * 10 ** goldX.decimals()
-- _phaseCount - 20
-- _coeffs - [coeff1, coeff2. coeff3...], each coefficient should be multiplied by 10 ** goldX.decimals()
+- \_phaseSupply - 9,952,381 \* 10 \*\* goldX.decimals()
+- \_phaseCount - 20
+- \_coeffs - [coeff1, coeff2. coeff3...], each coefficient should be multiplied by 10 \*\* goldX.decimals()
 
 There would be 20 phases with 9,952,381 supply each, phases have their own mining coefficients that are applied to FuseG amount during transactions with FuseG token.
 
 #### Parameters
 
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| _phaseSupply | uint256 | GoldX amount in one phase |
-| _phaseCount | uint8 | amount of phases |
-| _coeffs | uint256[] | FuseG : GoldX coefficient for each phase |
+| Name          | Type      | Description                              |
+| ------------- | --------- | ---------------------------------------- |
+| \_phaseSupply | uint256   | GoldX amount in one phase                |
+| \_phaseCount  | uint8     | amount of phases                         |
+| \_coeffs      | uint256[] | FuseG : GoldX coefficient for each phase |
 
 ### mineGoldX
 
 ```solidity
 function mineGoldX(address sender, uint256 fuseGAmount) external
 ```
+
 > Only FuseG token can call
 
-> GoldX is only mined when users buy/sell FuseG via platform or DEX 
+> GoldX is only mined when users buy/sell FuseG via platform or DEX
 
-Called by FuseG token, mines GoldX to FuseG holders. During transactions with FuseG tokens sender receives/mines a small amount of GoldX tokens based on the current phase in the reward vault. For example if Alice sells X amount of FuseG, she then receives X*coeff amount of GoldX from the vault, where coeff is the current phase's coefficient.
+Called by FuseG token, mines GoldX to FuseG holders. During transactions with FuseG tokens sender receives/mines a small amount of GoldX tokens based on the current phase in the reward vault. For example if Alice sells X amount of FuseG, she then receives X\*coeff amount of GoldX from the vault, where coeff is the current phase's coefficient.
 
 #### Parameters
 
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| sender | address | user who initiated FuseG transaction |
+| Name        | Type    | Description                           |
+| ----------- | ------- | ------------------------------------- |
+| sender      | address | user who initiated FuseG transaction  |
 | fuseGAmount | uint256 | amount of FuseG tokens in transaction |
-
 
 ### getMiningPhase
 
@@ -1162,9 +1201,9 @@ Returns current mining phase based on the GoldX amount mined from the vault, als
 
 #### Return Values
 
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| phase | uint8 | current mining phase |
+| Name                 | Type    | Description                |
+| -------------------- | ------- | -------------------------- |
+| phase                | uint8   | current mining phase       |
 | remainingPhaseSupply | uint256 | current phase GoldX amount |
 
 ### getGoldX
@@ -1178,6 +1217,7 @@ Returns GOLDX address
 # IGoldX.sol
 
 ## Events
+
 ### SetFees
 
 ```solidity
@@ -1188,9 +1228,9 @@ Emitted when owner sets a new transaction fee.
 
 #### Parameters
 
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| newFeeAmount| uint256 | transaction fee|
+| Name         | Type    | Description     |
+| ------------ | ------- | --------------- |
+| newFeeAmount | uint256 | transaction fee |
 
 ### AddToWhitelist
 
@@ -1202,9 +1242,9 @@ Emitted when new user is added to the whitelist.
 
 #### Parameters
 
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| account| uint256 | user's address|
+| Name    | Type    | Description    |
+| ------- | ------- | -------------- |
+| account | uint256 | user's address |
 
 ### AddToBlacklist
 
@@ -1216,9 +1256,9 @@ Emitted when new user is added to the blacklist.
 
 #### Parameters
 
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| account| uint256 | user's address|
+| Name    | Type    | Description    |
+| ------- | ------- | -------------- |
+| account | uint256 | user's address |
 
 ### RemoveFromWhitelist
 
@@ -1230,9 +1270,9 @@ Emitted when new user is removed from the whitelist.
 
 #### Parameters
 
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| account| uint256 | user's address|
+| Name    | Type    | Description    |
+| ------- | ------- | -------------- |
+| account | uint256 | user's address |
 
 ### RemoveFromBlacklist
 
@@ -1244,9 +1284,9 @@ Emitted when new user is removed from the blacklist.
 
 #### Parameters
 
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| account| uint256 | user's address|
+| Name    | Type    | Description    |
+| ------- | ------- | -------------- |
+| account | uint256 | user's address |
 
 # IMultiSigVault.sol
 
@@ -1259,7 +1299,9 @@ enum Proposals {
   RemoveSigner,
   ChangeOwner
 }
+
 ```
+
 Proposal types enum
 0 - transfer
 1 - add multisigner
@@ -1277,9 +1319,11 @@ struct Proposal {
   uint256 numConfirmations;
 }
 ```
-Proposal structure 
+
+Proposal structure
 
 ## Events
+
 ### SubmitProposal
 
 ```solidity
@@ -1290,13 +1334,13 @@ Emitted when new proposal has been created
 
 #### Parameters
 
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| signer | address | proposal initiator |
-| proposalType | enum IMultiSigVault.Proposals | see Proposals enum |
-| proposalIndex | uint256 | index of the proposal inside proposals array |
-| to | address | subject of the proposal |
-| amount | uint256 | GoldX amount to send if tx type proposal |
+| Name          | Type                          | Description                                  |
+| ------------- | ----------------------------- | -------------------------------------------- |
+| signer        | address                       | proposal initiator                           |
+| proposalType  | enum IMultiSigVault.Proposals | see Proposals enum                           |
+| proposalIndex | uint256                       | index of the proposal inside proposals array |
+| to            | address                       | subject of the proposal                      |
+| amount        | uint256                       | GoldX amount to send if tx type proposal     |
 
 ### ConfirmProposal
 
@@ -1308,9 +1352,9 @@ Emitted when a multisigner has confirmed a proposal
 
 #### Parameters
 
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| signer | address | signer who confirmed the proposal |
+| Name          | Type    | Description                                  |
+| ------------- | ------- | -------------------------------------------- |
+| signer        | address | signer who confirmed the proposal            |
 | proposalIndex | uint256 | index of the proposal inside proposals array |
 
 ### RevokeConfirmation
@@ -1323,9 +1367,9 @@ Emitted when confirmation has been cancelled by a signer
 
 #### Parameters
 
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| signer | address | signer who cancelled his confirmation |
+| Name          | Type    | Description                                  |
+| ------------- | ------- | -------------------------------------------- |
+| signer        | address | signer who cancelled his confirmation        |
 | proposalIndex | uint256 | index of the proposal inside proposals array |
 
 ### ExecuteProposal
@@ -1338,14 +1382,15 @@ Emitted after proposal has been executed by the majority of votes
 
 #### Parameters
 
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| signer | address | signer who executed the proposal |
+| Name          | Type    | Description                                  |
+| ------------- | ------- | -------------------------------------------- |
+| signer        | address | signer who executed the proposal             |
 | proposalIndex | uint256 | index of the proposal inside proposals array |
 
 # IRewardVault.sol
 
 ## Events
+
 ### NewRound
 
 ```solidity
@@ -1356,11 +1401,11 @@ Emitted when new round has been started
 
 #### Parameters
 
-| Name | Type | Description |
-| ---- | ---- | ----------- |
+| Name        | Type    | Description               |
+| ----------- | ------- | ------------------------- |
 | roundSupply | uint256 | GoldX amount in one round |
 | phaseSupply | uint256 | GoldX amount in one phase |
-| phaseCount | uint8 | amount of phases |
+| phaseCount  | uint8   | amount of phases          |
 
 ### Mine
 
@@ -1372,10 +1417,10 @@ Emitted when GoldX is mined via FuseG transfer
 
 #### Parameters
 
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| miner | address | GoldX receiver |
-| goldXAmount | uint256 | GoldX amount |
+| Name        | Type    | Description    |
+| ----------- | ------- | -------------- |
+| miner       | address | GoldX receiver |
+| goldXAmount | uint256 | GoldX amount   |
 
 ### RewardVaultDepleted
 
@@ -1384,6 +1429,3 @@ event RewardVaultDepleted()
 ```
 
 Indicates that reward vault is out of GoldX, all phases are finished
-
-
-
