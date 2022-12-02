@@ -51,4 +51,9 @@ module.exports = {
       mumbai: POLYGONSCAN_API_KEY,
     },
   },
+  docgen: {
+   outputDir: "docs",
+   pages: "single", 
+   collapseNewlines: true
+  } 
 };

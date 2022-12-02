@@ -586,6 +586,7 @@ contract GOLDX is Context, IGOLDX, Ownable, AccessControl, Pausable {
         ) = _getFeeDistribution(rFee);
         // convert amounts from r-space into t-space
         uint256 tToBurn = tokenFromReflection(rToBurn);
+        uint256 tToHolders = tokenFromReflection(rToHolders);
         uint256 tToTreasury = tokenFromReflection(rToTreasury);
         uint256 tToReferrals = tokenFromReflection(rToReferrals);
         // if user has a referrer, split rewards between them
@@ -620,8 +621,7 @@ contract GOLDX is Context, IGOLDX, Ownable, AccessControl, Pausable {
         // add the amount of t-space tokens paid as fees to the total amout of fees
         _tFeeTotal = _tFeeTotal.add(tFee);
 
-        // TODO add event here
-
+        emit Distribute(msg.sender, tToHolders);
         emit Transfer(msg.sender, address(0), tToBurn);
         emit Transfer(msg.sender, treasury, tToTreasury);
     }

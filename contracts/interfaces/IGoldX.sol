@@ -15,6 +15,11 @@ interface IGOLDX {
     event Transfer(address indexed from, address indexed to, uint256 value);
 
     /**
+     * @dev Emitted when `amount` tokens are destributed as fees to GoldX holders
+     */
+    event Distribute(address indexed from, uint256 indexed amount);
+
+    /**
      * @dev Emitted when the allowance of a `spender` for an `owner` is set by
      * a call to {approve}. `value` is the new allowance.
      */
